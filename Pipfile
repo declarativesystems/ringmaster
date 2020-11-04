@@ -8,6 +8,9 @@ pytest = "*"
 
 [packages]
 ringmaster = {editable = true,path = "."}
+docopts = "*"
+requests = "*"
+loguru = "*"
 
 [requires]
 python_version = "3.6"
