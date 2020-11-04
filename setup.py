@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="ringmaster",
+    name="ringmaster.show",
     version="0.0.0",
     author="Geoff Williams",
     author_email="None",

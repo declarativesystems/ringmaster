@@ -1,0 +1,11 @@
+MANIFEST.in
+README.md
+setup.py
+ringmaster/__init__.py
+ringmaster/aws.py
+ringmaster/cli.py
+ringmaster.show.egg-info/PKG-INFO
+ringmaster.show.egg-info/SOURCES.txt
+ringmaster.show.egg-info/dependency_links.txt
+ringmaster.show.egg-info/entry_points.txt
+ringmaster.show.egg-info/top_level.txt

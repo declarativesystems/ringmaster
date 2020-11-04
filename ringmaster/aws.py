@@ -79,14 +79,15 @@ def run_cmd(data, cmd):
                 break
             if output:
                 logger.log("OUTPUT", output.decode("UTF-8").strip())
-        return_code = proc.poll()
-        logger.info(f"result: {return_code}")
-        return return_code
+        rc = proc.poll()
+        logger.debug(f"result: {rc}")
+        return rc
 
 
 def do_stage(data, intermediate_databag_file, stage):
     for shell_script in glob.glob(f"{stage}/*.sh"):
-        logger.info(f"shell script: {shell_script}")
+        logger.debug(f"shell script: {shell_script}")
+        logger.info(shell_script)
         rc = run_cmd(data, f"bash {shell_script}")
         if rc:
             # bomb out
@@ -124,7 +125,7 @@ def run_dir(run_dir):
         logger.debug(f"found: {run_dir}")
         # for some reason the default order is reveresed when using ranges
         for stage in sorted(glob.glob(f"./{run_dir}/[0-9][0-9][0-9][0-9]")):
-            logger.info(f"stage: {stage}")
+            logger.debug(f"stage: {stage}")
             do_stage(data, intermediate_databag_file, stage)
     else:
         logger.error(f"missing directory: {run_dir}")

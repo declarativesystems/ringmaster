@@ -27,7 +27,6 @@ from .aws import down
 # color logs
 # https://stackoverflow.com/a/56944256/3441106
 def setup_logging(level, logger_name=None):
-    print("set log level: " + level)
     logger_name = logger_name or __name__.split(".")[0]
     log_formats = {
         "DEBUG": "{time} {level} {message}",

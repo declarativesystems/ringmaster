@@ -4,7 +4,6 @@ setup.py
 ringmaster/__init__.py
 ringmaster/aws.py
 ringmaster/cli.py
-ringmaster/logger.py
 ringmaster.egg-info/PKG-INFO
 ringmaster.egg-info/SOURCES.txt
 ringmaster.egg-info/dependency_links.txt

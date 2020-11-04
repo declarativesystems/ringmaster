@@ -7,7 +7,7 @@ verify_ssl = true
 pytest = "*"
 
 [packages]
-ringmaster = {editable = true,path = "."}
+ringmaster.show = {editable = true,path = "."}
 docopts = "*"
 requests = "*"
 loguru = "*"

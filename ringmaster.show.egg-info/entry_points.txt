@@ -1,0 +1,3 @@
+[console_scripts]
+ringmaster = ringmaster.cli:main
+
