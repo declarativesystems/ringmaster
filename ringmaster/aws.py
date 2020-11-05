@@ -19,6 +19,11 @@ from halo import Halo
 
 RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
 
+# AWS/boto3 API error messages to look for. Use partial regex to protect
+# against upstream changes as much as we can
+ERROR_UP_TO_DATE = r"No updates are to be performed"
+ERROR_AWS = r"encountered a terminal failure state"
+ERROR_MISSING = r"does not exist"
 
 def aws_init():
     vendor_cfn_dir = ".vendor/aws/cloudformation"
@@ -82,7 +87,7 @@ def stack_exists(stack_name):
         exists = True
     except botocore.exceptions.ClientError as e:
         logger.debug(f"cloudformation exception - missing stack: {e}")
-        if e.response['Error']['Code'] == "ValidationError":
+        if re.search(ERROR_MISSING, str(e), re.IGNORECASE):
             # normal AWS response for a missing stack
             exists = False
         else:
@@ -101,6 +106,7 @@ def run_cloudformation(cloudformation_file, verb, data):
     template_body = pathlib.Path(cloudformation_file).read_text()
     act = False
     if exists and verb == constants.UP_VERB:
+        # update
         def ensure_fn():
             return client.update_stack(
                 StackName=stack_name,
@@ -112,6 +118,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         waiter_name = "stack_update_complete"
         act = True
     elif exists and verb == constants.DOWN_VERB:
+        # delete
         def ensure_fn():
             return client.delete_stack(
                 StackName=stack_name,
@@ -119,8 +126,9 @@ def run_cloudformation(cloudformation_file, verb, data):
         waiter_name = "stack_delete_complete"
         act = True
     elif not exists and verb == constants.UP_VERB:
+        # create
         def ensure_fn():
-            return client.update_stack(
+            return client.create_stack(
                 StackName=stack_name,
                 TemplateBody=template_body,
                 Parameters=params,
@@ -129,6 +137,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         waiter_name = "stack_create_complete"
         act = True
     elif not exists and verb == constants.DOWN_VERB:
+        # already deleted
         logger.info(constants.MSG_UP_TO_DATE)
     else:
         raise RuntimeError(f"bad arguments in run_cloudformation - exists:{exists} verb:{verb}")
@@ -152,13 +161,20 @@ def run_cloudformation(cloudformation_file, verb, data):
         # boto3 exceptions...
         # https://github.com/boto/botocore/blob/develop/botocore/exceptions.py
         except botocore.exceptions.ClientError as e:
-            logger.debug(f"cloudformation exception - missing stack: {e}")
-            if e.response['Error']['Code'] == "ValidationError" \
-                    and re.search(r"No updates are to be performed", str(e), flags=re.IGNORECASE):
+            logger.debug(f"boto/client exception: {e}")
+            if re.search(ERROR_UP_TO_DATE, str(e), flags=re.IGNORECASE):
                 logger.info(constants.MSG_UP_TO_DATE)
             else:
                 # no idea
                 raise e
+        except botocore.exceptions.WaiterError as e:
+            logger.debug(f"botocore/waiter exception: {e}")
+            if re.search(ERROR_AWS, str(e), flags=re.IGNORECASE):
+                raise RuntimeError(f"cloudformation failed - check stack {stack_name} in the AWS console")
+            else:
+                # no idea
+                raise e
+
 
 
 def check_requirements():
