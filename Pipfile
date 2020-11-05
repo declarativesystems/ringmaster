@@ -7,10 +7,14 @@ verify_ssl = true
 pytest = "*"
 
 [packages]
-ringmaster.show = {editable = true,path = "."}
+boto3 = "*"
+ringmaster = {editable = true,path = "."}
 docopts = "*"
 requests = "*"
 loguru = "*"
+cfn-flip = "*"
+botocore = "*"
+halo = "*"
 
 [requires]
 python_version = "3.6"

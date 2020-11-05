@@ -1,3 +1,4 @@
+import re
 import subprocess
 import pathlib
 import requests
@@ -8,131 +9,156 @@ import json
 import sys
 import tempfile
 from loguru import logger
-
+import boto3
+import snakecase
+import pathlib
+from ringmaster import constants as constants
+from cfn_tools import load_yaml, dump_yaml
+import botocore.exceptions
+from halo import Halo
 
 RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
-UP_DIR = "up"
-DOWN_DIR = "down"
-DATABAG_FILE = "databag.yaml"
-RES_DIR = "res"
-RES_AWS_DIR = os.path.join(RES_DIR, "aws")
-RES_AWS_IAM_DIR = os.path.join(RES_AWS_DIR, "iam")
-RINGMASTER_ENV = {
-    "res_dir": RES_DIR,
-    "res_aws_dir": RES_AWS_DIR,
-    "res_aws_iam_dir": RES_AWS_IAM_DIR,
-}
 
-
-def download(url, filename):
-    downloaded = requests.get(url, allow_redirects=True)
-    open(filename, 'wb').write(downloaded.content)
 
 def aws_init():
     vendor_cfn_dir = ".vendor/aws/cloudformation"
     logger.info("Initialising ringmaster for AWS...")
     pathlib.Path(vendor_cfn_dir).mkdir(parents=True, exist_ok=True)
     vendor_vpc_cfn=os.path.join(vendor_cfn_dir, "vpc.yaml")
-    download(vendor_vpc_cfn)
-
-def xxup():
-    check_requirements()
-
-def load_databag(data):
-    if os.path.exists(DATABAG_FILE):
-        with open(DATABAG_FILE) as f:
-            data.update(yaml.safe_load(f))
-
-        logger.debug(f"loaded databag contents: {data}")
-
-    else:
-        logger.warning(f"missing databag: {DATABAG_FILE}")
+    # download(vendor_vpc_cfn)
 
 
-def convert_dict_values_to_string(data):
-    # all values passed to os.environ must be strings, avoid unwanted yaml help
-    for key in data:
-        data[key] = str(data[key])
+def filename_to_stack_name(cloudformation_file):
+    return os.path.basename(cloudformation_file)\
+        .replace(constants.PATTERN_CLOUDFORMATION_FILE,"")
 
 
-def merge_env(data):
-    env = os.environ.copy()
-    env.update(RINGMASTER_ENV)
-    env.update(data)
-
-    convert_dict_values_to_string(env)
-    return env
-
-
-def run_cmd(data, cmd):
-    env = merge_env(data)
-    logger.debug(f"merged environment: {env}")
-
-    with subprocess.Popen(cmd,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=True,
-                          env=env) as proc:
-        while True:
-            output = proc.stdout.readline()
-            if proc.poll() is not None:
-                break
-            if output:
-                logger.log("OUTPUT", output.decode("UTF-8").strip())
-        rc = proc.poll()
-        logger.debug(f"result: {rc}")
-        return rc
-
-
-def do_stage(data, intermediate_databag_file, stage):
-    for shell_script in glob.glob(f"{stage}/*.sh"):
-        logger.debug(f"shell script: {shell_script}")
-        logger.info(shell_script)
-        rc = run_cmd(data, f"bash {shell_script}")
-        if rc:
-            # bomb out
-            raise RuntimeError(f"script {shell_script} - non zero exit status: {rc}")
-        elif os.path.getsize(intermediate_databag_file):
-            # grab stashed databag
-            logger.debug(f"loading databag left by last stage from {intermediate_databag_file}")
-            with open(intermediate_databag_file) as json_file:
-                extra_data = json.load(json_file)
-
-            logger.debug(f"loaded {len(extra_data)} items: {extra_data}")
-            data.update(extra_data)
-
-            # empty the bag for next iteration
-            open(intermediate_databag_file, 'w').close()
-
-
-def down():
-    return run_dir(DOWN_DIR)
-
-
-def up():
-    return run_dir(UP_DIR)
-
-def run_dir(run_dir):
-    # users write values as JSON to this file and they are added to the
-    # databag incrementally
-    _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
-    data = {
-        "intermediate_databag_file":  intermediate_databag_file
+def cloudformation_param(key, value):
+    return {
+        "ParameterKey": key,
+        "ParameterValue": value
     }
-    load_databag(data)
 
-    if os.path.exists(run_dir):
-        logger.debug(f"found: {run_dir}")
-        # for some reason the default order is reveresed when using ranges
-        for stage in sorted(glob.glob(f"./{run_dir}/[0-9][0-9][0-9][0-9]")):
-            logger.debug(f"stage: {stage}")
-            do_stage(data, intermediate_databag_file, stage)
+def stack_params(cloudformation_file, data):
+    # we can only insert stack parameters that are defined in YAML or cfn
+    # will barf, so grab the parameter names from the CFN file and then
+    # grab the corresponding parameters from the databag. If anything is
+    # missing bomb out now before CFN does.
+    # parse with cfn_flip as pyyaml cant handle things like `!Ref`
+    # https://stackoverflow.com/a/55349491/3441106
+    cloudformation = load_yaml(pathlib.Path(cloudformation_file).read_text())
+
+    params = []
+
+    if "Parameters" in cloudformation:
+        for cfn_param in cloudformation["Parameters"]:
+            logger.debug(f"processing parameter: {cfn_param}")
+
+            # cloudformation parameters are usually camel case but databag
+            # parameters are usually snake case - use an exact match followed
+            # by snake case
+            if data.get(cfn_param):
+                params.append(cloudformation_param(cfn_param, data.get(cfn_param)))
+            elif data.get(snakecase.convert(cfn_param)):
+                params.append(cloudformation_param(cfn_param, data.get(snakecase.convert(cfn_param))))
+            elif cloudformation["Parameters"][cfn_param].get("Default"):
+                logger.debug(f"Using cloudformation default for {cfn_param}")
+            else:
+                raise RuntimeError(f"Cloudformation file:{cloudformation_file} missing parameter:{cfn_param}")
     else:
-        logger.error(f"missing directory: {run_dir}")
+        logger.debug(f"no Parameters section in {cloudformation_file}")
 
-    # cleanup
-    os.unlink(intermediate_databag_file)
+    return params
 
+
+def stack_exists(stack_name):
+    client = boto3.client('cloudformation')
+    logger.debug(f"cloudformation - describe_stacks: {stack_name}")
+    try:
+        response = client.describe_stacks(
+            StackName=stack_name,
+        )
+        logger.debug(f"cloudformation - nothing thrown, response: {response}")
+        exists = True
+    except botocore.exceptions.ClientError as e:
+        logger.debug(f"cloudformation exception - missing stack: {e}")
+        if e.response['Error']['Code'] == "ValidationError":
+            # normal AWS response for a missing stack
+            exists = False
+        else:
+            # no idea... AWS broken?
+            raise e
+
+    logger.debug(f"cloudformation stack:{stack_name} exists:{exists}")
+    return exists
+
+
+def run_cloudformation(cloudformation_file, verb, data):
+    stack_name = filename_to_stack_name(cloudformation_file)
+    params = stack_params(cloudformation_file, data)
+    client = boto3.client('cloudformation')
+    exists = stack_exists(stack_name)
+    template_body = pathlib.Path(cloudformation_file).read_text()
+    act = False
+    if exists and verb == constants.UP_VERB:
+        def ensure_fn():
+            return client.update_stack(
+                StackName=stack_name,
+                TemplateBody=template_body,
+                Parameters=params,
+                Capabilities=['CAPABILITY_NAMED_IAM'],
+            )
+
+        waiter_name = "stack_update_complete"
+        act = True
+    elif exists and verb == constants.DOWN_VERB:
+        def ensure_fn():
+            return client.delete_stack(
+                StackName=stack_name,
+            )
+        waiter_name = "stack_delete_complete"
+        act = True
+    elif not exists and verb == constants.UP_VERB:
+        def ensure_fn():
+            return client.update_stack(
+                StackName=stack_name,
+                TemplateBody=template_body,
+                Parameters=params,
+                Capabilities=['CAPABILITY_NAMED_IAM'],
+            )
+        waiter_name = "stack_create_complete"
+        act = True
+    elif not exists and verb == constants.DOWN_VERB:
+        logger.info(constants.MSG_UP_TO_DATE)
+    else:
+        raise RuntimeError(f"bad arguments in run_cloudformation - exists:{exists} verb:{verb}")
+
+    if act:
+        logger.debug(
+            f"cloudformation stack:{stack_name} file: {cloudformation_file}"
+        )
+
+        # do the deed...
+        try:
+            with Halo(text=f"Cloudformation {cloudformation_file}", spinner='dots'):
+                response = ensure_fn()
+                logger.debug(f"response: {response}")
+
+                # ...wait for the result
+                waiter = client.get_waiter(waiter_name)
+                waiter.wait(
+                    StackName=stack_name,
+                )
+        # boto3 exceptions...
+        # https://github.com/boto/botocore/blob/develop/botocore/exceptions.py
+        except botocore.exceptions.ClientError as e:
+            logger.debug(f"cloudformation exception - missing stack: {e}")
+            if e.response['Error']['Code'] == "ValidationError" \
+                    and re.search(r"No updates are to be performed", str(e), flags=re.IGNORECASE):
+                logger.info(constants.MSG_UP_TO_DATE)
+            else:
+                # no idea
+                raise e
 
 
 def check_requirements():

@@ -19,8 +19,8 @@ import sys
 from docopt import docopt
 
 from .aws import aws_init
-from .aws import up
-from .aws import down
+from .api import up
+from .api import down
 
 
 

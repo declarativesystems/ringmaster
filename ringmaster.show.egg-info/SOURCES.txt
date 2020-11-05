@@ -2,8 +2,10 @@ MANIFEST.in
 README.md
 setup.py
 ringmaster/__init__.py
+ringmaster/api.py
 ringmaster/aws.py
 ringmaster/cli.py
+ringmaster/constants.py
 ringmaster.show.egg-info/PKG-INFO
 ringmaster.show.egg-info/SOURCES.txt
 ringmaster.show.egg-info/dependency_links.txt
