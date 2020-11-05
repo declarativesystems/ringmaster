@@ -90,7 +90,7 @@ def do_stage(data, intermediate_databag_file, stage, verb):
         logger.debug(f"cloud formation: {cloudformation_file}")
         logger.info(cloudformation_file)
 
-        run_cloudformation(cloudformation_file, verb, data)
+        data.update(run_cloudformation(cloudformation_file, verb, data))
 
 
 def down():

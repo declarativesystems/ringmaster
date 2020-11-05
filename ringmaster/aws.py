@@ -33,9 +33,13 @@ def aws_init():
     # download(vendor_vpc_cfn)
 
 
-def filename_to_stack_name(cloudformation_file):
-    return os.path.basename(cloudformation_file)\
-        .replace(constants.PATTERN_CLOUDFORMATION_FILE,"")
+def filename_to_stack_name(cloudformation_file, data):
+    extracted_name = os.path.basename(cloudformation_file)\
+        .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
+
+    prefix = data.get("cluster_name", "ringmaster")
+
+    return f"{prefix}-{extracted_name}"
 
 
 def cloudformation_param(key, value):
@@ -43,6 +47,7 @@ def cloudformation_param(key, value):
         "ParameterKey": key,
         "ParameterValue": value
     }
+
 
 def stack_params(cloudformation_file, data):
     # we can only insert stack parameters that are defined in YAML or cfn
@@ -98,13 +103,38 @@ def stack_exists(stack_name):
     return exists
 
 
+def cloudformation_outputs(stack_name, data):
+    client = boto3.client('cloudformation')
+    response = client.describe_stacks(
+        StackName=stack_name,
+    )
+    intermediate_databag = {}
+    if "Stacks" in response and "Outputs" in response["Stacks"][0]:
+        outputs = response["Stacks"][0]["Outputs"]
+        logger.debug(f"cloudformation - checking outputs: {outputs}")
+        for output in outputs:
+            # replace the value of `cluster_name` with literal `cluster_`
+            # eg foo-some-output --> cluster-some-output
+            # this is to prevent the need to eval() variables in bash
+            # to munge the variable to lookup
+            key_name = output["ExportName"].lower().replace("-", "_")
+            key_name = key_name.replace(f"{data['cluster_name']}_", "cluster_")
+
+            string_value = str(output["OutputValue"])
+            intermediate_databag[key_name] = string_value
+
+    logger.debug(f"cloudformation - outputs:{len(intermediate_databag)} value: {intermediate_databag}")
+    return intermediate_databag
+
+
 def run_cloudformation(cloudformation_file, verb, data):
-    stack_name = filename_to_stack_name(cloudformation_file)
+    stack_name = filename_to_stack_name(cloudformation_file, data)
     params = stack_params(cloudformation_file, data)
     client = boto3.client('cloudformation')
     exists = stack_exists(stack_name)
     template_body = pathlib.Path(cloudformation_file).read_text()
     act = False
+
     if exists and verb == constants.UP_VERB:
         # update
         def ensure_fn():
@@ -158,6 +188,7 @@ def run_cloudformation(cloudformation_file, verb, data):
                 waiter.wait(
                     StackName=stack_name,
                 )
+
         # boto3 exceptions...
         # https://github.com/boto/botocore/blob/develop/botocore/exceptions.py
         except botocore.exceptions.ClientError as e:
@@ -175,6 +206,14 @@ def run_cloudformation(cloudformation_file, verb, data):
                 # no idea
                 raise e
 
+    # ...If we're still here our stack is up, grab all the cloudformation
+    # outputs and add them to the databag
+    if verb == constants.DOWN_VERB:
+        intermediate_data = {}
+    else:
+        intermediate_data = cloudformation_outputs(stack_name, data)
+
+    return intermediate_data
 
 
 def check_requirements():
