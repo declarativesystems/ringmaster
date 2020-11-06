@@ -11,6 +11,7 @@ from loguru import logger
 
 from ringmaster import constants as constants
 from .aws import run_cloudformation
+from .aws import load_eksctl_databag
 
 
 def download(url, filename):
@@ -64,26 +65,32 @@ def run_cmd(cmd, data):
         return rc
 
 
+def load_intermediate_databag(intermediate_databag_file, data):
+    if os.path.getsize(intermediate_databag_file):
+        # grab stashed databag
+        logger.debug(f"loading databag left by last stage from {intermediate_databag_file}")
+        with open(intermediate_databag_file) as json_file:
+            extra_data = json.load(json_file)
+
+        logger.debug(f"loaded {len(extra_data)} items: {extra_data}")
+        data.update(extra_data)
+
+        # empty the bag for next iteration
+        open(intermediate_databag_file, 'w').close()
+
+
 def do_stage(data, intermediate_databag_file, stage, verb):
     # bash scripts
-    for shell_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
-        logger.debug(f"shell script: {shell_script}")
-        logger.info(shell_script)
-        rc = run_cmd(f"bash {shell_script}", data)
+    for bash_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
+        logger.debug(f"shell script: {bash_script}")
+        logger.info(bash_script)
+        rc = run_cmd(f"bash {bash_script}", data)
         if rc:
             # bomb out
-            raise RuntimeError(f"script {shell_script} - non zero exit status: {rc}")
-        elif os.path.getsize(intermediate_databag_file):
-            # grab stashed databag
-            logger.debug(f"loading databag left by last stage from {intermediate_databag_file}")
-            with open(intermediate_databag_file) as json_file:
-                extra_data = json.load(json_file)
+            raise RuntimeError(f"script {bash_script} - non zero exit status: {rc}")
 
-            logger.debug(f"loaded {len(extra_data)} items: {extra_data}")
-            data.update(extra_data)
-
-            # empty the bag for next iteration
-            open(intermediate_databag_file, 'w').close()
+        load_intermediate_databag(intermediate_databag_file, data)
+        load_eksctl_databag(data['eksctl_databag_file'], data)
 
     # cloudformation
     for cloudformation_file in glob.glob(f"{stage}/*{constants.PATTERN_CLOUDFORMATION_FILE}"):
@@ -105,9 +112,12 @@ def run_dir(verb):
     # users write values as JSON to this file and they are added to the
     # databag incrementally
     _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
+    _, eksctl_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster-eksctl")
     data = {
         "intermediate_databag_file":  intermediate_databag_file,
+        "eksctl_databag_file": eksctl_databag_file,
         "msg_up_to_date": constants.MSG_UP_TO_DATE,
+        "name": os.path.basename(os.getcwd())
     }
     load_databag(data)
 
@@ -122,4 +132,5 @@ def run_dir(verb):
 
     # cleanup
     os.unlink(intermediate_databag_file)
+    os.unlink(eksctl_databag_file)
 

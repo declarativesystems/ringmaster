@@ -17,6 +17,8 @@ from cfn_tools import load_yaml, dump_yaml
 import botocore.exceptions
 from halo import Halo
 
+from ringmaster.util import flatten_nested_dict
+
 RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
 
 # AWS/boto3 API error messages to look for. Use partial regex to protect
@@ -34,13 +36,21 @@ def aws_init():
 
 
 def filename_to_stack_name(cloudformation_file, data):
-    extracted_name = os.path.basename(cloudformation_file)\
+    return os.path.basename(cloudformation_file)\
         .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
 
-    prefix = data.get("cluster_name", "ringmaster")
+def load_eksctl_databag(eksctl_databag_file, data):
+    if os.path.getsize(eksctl_databag_file):
+        logger.debug(f"loading eksctl cluster info from from {eksctl_databag_file}")
+        with open(eksctl_databag_file) as json_file:
+            # strip outer array
+            extra_data = json.load(json_file)[0]
 
-    return f"{prefix}-{extracted_name}"
+        logger.debug(f"loaded items:{len(extra_data)} data:{extra_data}")
+        data.update(flatten_nested_dict(extra_data))
 
+        # empty the bag so we know to ignore it
+        open(eksctl_databag_file, 'w').close()
 
 def cloudformation_param(key, value):
     return {
@@ -103,22 +113,24 @@ def stack_exists(stack_name):
     return exists
 
 
-def cloudformation_outputs(stack_name, data):
+def cloudformation_outputs(stack_name, prefixed_stack_name, data):
     client = boto3.client('cloudformation')
     response = client.describe_stacks(
-        StackName=stack_name,
+        StackName=prefixed_stack_name,
     )
     intermediate_databag = {}
     if "Stacks" in response and "Outputs" in response["Stacks"][0]:
         outputs = response["Stacks"][0]["Outputs"]
         logger.debug(f"cloudformation - checking outputs: {outputs}")
         for output in outputs:
-            # replace the value of `cluster_name` with literal `cluster_`
-            # eg foo-some-output --> cluster-some-output
-            # this is to prevent the need to eval() variables in bash
-            # to munge the variable to lookup
+            # replace the value of `{prefixed_stack_name}_` with `{stack_name}_`
+            # eg foo-infra-efs --> infa_efs
+            # this lets us reference variables in the stack without having to
+            # adjust the name each time and avoids tricks like eval in bash.
+            # the downside of this is you need to know what stack generated the
+            # output name
             key_name = output["ExportName"].lower().replace("-", "_")
-            key_name = key_name.replace(f"{data['cluster_name']}_", "cluster_")
+            key_name = key_name.replace(f"{prefixed_stack_name}_", f"{stack_name}_")
 
             string_value = str(output["OutputValue"])
             intermediate_databag[key_name] = string_value
@@ -129,9 +141,10 @@ def cloudformation_outputs(stack_name, data):
 
 def run_cloudformation(cloudformation_file, verb, data):
     stack_name = filename_to_stack_name(cloudformation_file, data)
+    prefixed_stack_name = f"{data['name']}-{stack_name}"
     params = stack_params(cloudformation_file, data)
     client = boto3.client('cloudformation')
-    exists = stack_exists(stack_name)
+    exists = stack_exists(prefixed_stack_name)
     template_body = pathlib.Path(cloudformation_file).read_text()
     act = False
 
@@ -139,7 +152,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         # update
         def ensure_fn():
             return client.update_stack(
-                StackName=stack_name,
+                StackName=prefixed_stack_name,
                 TemplateBody=template_body,
                 Parameters=params,
                 Capabilities=['CAPABILITY_NAMED_IAM'],
@@ -151,7 +164,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         # delete
         def ensure_fn():
             return client.delete_stack(
-                StackName=stack_name,
+                StackName=prefixed_stack_name,
             )
         waiter_name = "stack_delete_complete"
         act = True
@@ -159,7 +172,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         # create
         def ensure_fn():
             return client.create_stack(
-                StackName=stack_name,
+                StackName=prefixed_stack_name,
                 TemplateBody=template_body,
                 Parameters=params,
                 Capabilities=['CAPABILITY_NAMED_IAM'],
@@ -174,7 +187,7 @@ def run_cloudformation(cloudformation_file, verb, data):
 
     if act:
         logger.debug(
-            f"cloudformation stack:{stack_name} file: {cloudformation_file}"
+            f"cloudformation stack:{prefixed_stack_name} file: {cloudformation_file}"
         )
 
         # do the deed...
@@ -186,7 +199,7 @@ def run_cloudformation(cloudformation_file, verb, data):
                 # ...wait for the result
                 waiter = client.get_waiter(waiter_name)
                 waiter.wait(
-                    StackName=stack_name,
+                    StackName=prefixed_stack_name,
                 )
 
         # boto3 exceptions...
@@ -201,7 +214,7 @@ def run_cloudformation(cloudformation_file, verb, data):
         except botocore.exceptions.WaiterError as e:
             logger.debug(f"botocore/waiter exception: {e}")
             if re.search(ERROR_AWS, str(e), flags=re.IGNORECASE):
-                raise RuntimeError(f"cloudformation failed - check stack {stack_name} in the AWS console")
+                raise RuntimeError(f"cloudformation failed - check stack {prefixed_stack_name} in the AWS console")
             else:
                 # no idea
                 raise e
@@ -211,7 +224,7 @@ def run_cloudformation(cloudformation_file, verb, data):
     if verb == constants.DOWN_VERB:
         intermediate_data = {}
     else:
-        intermediate_data = cloudformation_outputs(stack_name, data)
+        intermediate_data = cloudformation_outputs(stack_name, prefixed_stack_name, data)
 
     return intermediate_data
 
