@@ -94,45 +94,50 @@ def do_stage(data, stage, verb):
         install_solarwinds_papertrail(config_file, data)
 
 
-def down():
-    return run_dir(
-        constants.DOWN_VERB,
-        load_databag(constants.DATABAG_FILE)
-    )
+def down(goto):
+    return run_dir(constants.DOWN_VERB, goto)
 
 
-def up():
-    return run_dir(
-        constants.UP_VERB,
-        load_databag(constants.DATABAG_FILE)
-    )
+def up(goto):
+    return run_dir(constants.UP_VERB,goto)
 
 
-def user_up():
-    return run_dir(
-        constants.USER_UP_VERB,
-        load_databag(constants.OUTPUT_DATABAG_FILE)
-    )
+def user_up(goto):
+    return run_dir(constants.USER_UP_VERB,goto)
 
 
-def user_down():
-    return run_dir(
-        constants.USER_DOWN_VERB,
-        load_databag(constants.OUTPUT_DATABAG_FILE)
-    )
+def user_down(goto):
+    return run_dir(constants.USER_DOWN_VERB, goto)
 
 
-def run_dir(verb, data):
-
+def run_dir(verb, goto):
     if os.path.exists(verb):
         logger.debug(f"found: {verb}")
+        started = False
+
+        if goto == "0010":
+            data = load_databag(constants.DATABAG_FILE)
+        else:
+            data = load_databag(constants.OUTPUT_DATABAG_FILE)
+
         # for some reason the default order is reveresed when using ranges
         for stage in sorted(glob.glob(f"./{verb}/[0-9][0-9][0-9][0-9]")):
-            logger.debug(f"stage: {stage}")
-            do_stage(data, stage, verb)
+            if not started:
+                number = os.path.basename(stage)
+                if number == goto:
+                    started = True
+
+            if started:
+                logger.debug(f"stage: {stage}")
+                do_stage(data, stage, verb)
+
+        if not started:
+            logger.error(f"goto dir - not found: {goto}")
 
         # cleanup
+        logger.debug("delete intermediate databag")
         os.unlink(data[constants.KEY_INTERMEDIATE_DATABAG])
+        logger.debug("delete eksctl databag")
         os.unlink(data[constants.KEY_EKSCTL_DATABAG])
 
         # save the updated databag for use in normal operation
