@@ -14,7 +14,7 @@ from .aws import run_cloudformation
 from .aws import load_eksctl_databag
 from .solarwinds_papertrail import install_solarwinds_papertrail
 from .util import run_cmd
-from .k8s import run_kubectl
+import ringmaster.k8s as k8s
 
 debug = False
 
@@ -69,37 +69,50 @@ def load_intermediate_databag(data):
         open(intermediate_databag_file, 'w').close()
 
 
-def do_stage(data, stage, verb):
+def do_bash_script(stage, data):
     # bash scripts
     for bash_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
-        logger.debug(f"shell script: {bash_script}")
-        logger.info(bash_script)
+        logger.info(f"bash script: {bash_script}")
         run_cmd(f"bash {bash_script}", data)
 
         load_intermediate_databag(data)
         load_eksctl_databag(data)
 
+
+def do_cloud_formation(stage, verb, data):
     # cloudformation
     for cloudformation_file in glob.glob(f"{stage}/*{constants.PATTERN_CLOUDFORMATION_FILE}"):
-        logger.debug(f"Cloudformation: {cloudformation_file}")
-        logger.info(cloudformation_file)
-
+        logger.info(f"cloudformation {cloudformation_file}")
         data.update(run_cloudformation(cloudformation_file, verb, data))
 
+
+def do_kubectl(stage, verb, data):
     # kubectl (will pre-process yaml files and replace ${variable} with
     # variable from databag if present - looked at Kustomizer, too komplicated
     for kubectl_file in glob.glob(f"{stage}/*{constants.PATTERN_KUBECTL_FILE}"):
-        logger.debug(f"kubectl: {kubectl_file}")
-        logger.info(kubectl_file)
+        logger.info(f"kubectl: {kubectl_file}")
+        k8s.run_kubectl(kubectl_file, verb, data)
 
-        run_kubectl(kubectl_file, verb, data)
 
-    #
-    # solarwinds papertrail
-    #
+def do_solarwinds_papertrail(stage, data):
     for config_file in glob.glob(f"{stage}/*{constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE}"):
-        logger.debug(f"solarwinds papertrail: {config_file}")
+        logger.info(f"solarwinds papertrail: {config_file}")
         install_solarwinds_papertrail(config_file, data)
+
+
+def do_kustomization(stage, verb):
+    for kustomization_file in glob.glob(f"{stage}/*{constants.PATTERN_KUSTOMIZATION_FILE}"):
+        logger.info(f"kustomization: {kustomization_file}")
+        kubectl_cmd = "apply" if verb == constants.UP_VERB or verb == constants.USER_UP_VERB else "delete"
+        k8s.run_kustomizer(os.path.dirname(kustomization_file), kubectl_cmd)
+
+
+def do_stage(data, stage, verb):
+    do_kustomization(stage, verb)
+    do_cloud_formation(stage, verb, data)
+    do_kubectl(stage, verb, data)
+    do_solarwinds_papertrail(stage, data)
+    do_bash_script(stage, data)
 
 
 def down(goto):

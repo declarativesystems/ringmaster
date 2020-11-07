@@ -40,3 +40,8 @@ ringmaster up
 #### solarwinds_papertrail.yaml
 * single purpose file to configure solarwinds papertrail at cluster level
 * ringmaster will perform the entire installation
+
+#### kustomization.yaml
+* processed with `kubectl (apply|delete) -k`
+* not changed by ringmaster in any way
+* be sure to also download any required files

@@ -13,14 +13,14 @@ from .util import substitute_placeholders_in_file
 
 def copy_kustomization_files(root_dir, target_dir):
 
-    kustomization_file = os.path.join(root_dir, constants.KUSTOMIZATION_FILE)
+    kustomization_file = os.path.join(root_dir, constants.PATTERN_KUSTOMIZATION_FILE)
     with open(kustomization_file) as f:
         kustomization_data = yaml.safe_load(f)
 
     # kustomization.yaml
     Path(target_dir).mkdir(parents=True, exist_ok=True)
     shutil.copyfile(
-        kustomization_file, os.path.join(target_dir, constants.KUSTOMIZATION_FILE))
+        kustomization_file, os.path.join(target_dir, constants.PATTERN_KUSTOMIZATION_FILE))
     # resources
     for resource_file in kustomization_data.get("resources", []):
         source_file = os.path.join(root_dir, resource_file)

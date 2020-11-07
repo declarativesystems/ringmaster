@@ -21,8 +21,10 @@ PATTERN_CLOUDFORMATION_FILE = ".cloudformation.yaml"
 PATTERN_BASH = ".sh"
 PATTERN_KUBECTL_FILE = ".kubectl.yaml"
 PATTERN_SOLARWINDS_PAPERTRAIL_FILE = "solarwinds_papertrail.yaml"
+PATTERN_KUSTOMIZATION_FILE = "kustomization.yaml"
+
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"
-KUSTOMIZATION_FILE = "kustomization.yaml"
+
 KEY_INTERMEDIATE_DATABAG="intermediate_databag_file"
 KEY_EKSCTL_DATABAG="eksctl_databag_file"
