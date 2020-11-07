@@ -24,29 +24,33 @@ def download(url, filename):
     open(filename, 'wb').write(downloaded.content)
 
 
-
-
 def load_databag(databag_file):
     # users write values as JSON to this file and they are added to the
     # databag incrementally
     _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
     _, eksctl_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster-eksctl")
+
+    # general program settings
     data = {
-        "intermediate_databag_file":  intermediate_databag_file,
-        "eksctl_databag_file": eksctl_databag_file,
         "msg_up_to_date": constants.MSG_UP_TO_DATE,
-        "name": os.path.basename(os.getcwd()),
-        "debug": "debug" if debug else ""
     }
+
+    # load values from user
     if os.path.exists(databag_file):
         with open(databag_file) as f:
             data.update(yaml.safe_load(f))
-
-        logger.debug(f"loaded databag contents: {data}")
-
     else:
-        logger.warning(f"missing databag: {databag_file}")
+        logger.warning(f"missing databag file: {databag_file}")
 
+    # per-run program specific data
+    data.update({
+        constants.KEY_INTERMEDIATE_DATABAG: intermediate_databag_file,
+        constants.KEY_EKSCTL_DATABAG: eksctl_databag_file,
+        "debug": "debug" if debug else "",
+        "name": os.path.basename(os.getcwd()),
+    })
+
+    logger.debug(f"loaded databag contents: {data}")
     return data
 
 
@@ -55,7 +59,7 @@ def load_intermediate_databag(data):
     if os.path.getsize(intermediate_databag_file):
         # grab stashed databag
         logger.debug(f"loading databag left by last stage from {intermediate_databag_file}")
-        with open(intermediate_databag_file) as json_file:
+        with open(intermediate_databag_file, "r") as json_file:
             extra_data = json.load(json_file)
 
         logger.debug(f"loaded {len(extra_data)} items: {extra_data}")
@@ -63,7 +67,6 @@ def load_intermediate_databag(data):
 
         # empty the bag for next iteration
         open(intermediate_databag_file, 'w').close()
-
 
 
 def do_stage(data, stage, verb):

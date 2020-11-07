@@ -39,6 +39,7 @@ def filename_to_stack_name(cloudformation_file, data):
     return os.path.basename(cloudformation_file)\
         .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
 
+
 def load_eksctl_databag(data):
     eksctl_databag_file = data[constants.KEY_EKSCTL_DATABAG]
     if os.path.getsize(eksctl_databag_file):
@@ -53,6 +54,7 @@ def load_eksctl_databag(data):
 
         # empty the bag so we know to ignore it
         open(eksctl_databag_file, 'w').close()
+
 
 def cloudformation_param(key, value):
     return {
