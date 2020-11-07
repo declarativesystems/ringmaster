@@ -1,7 +1,10 @@
 import os
 UP_VERB = "up"
 DOWN_VERB = "down"
+USER_UP_VERB = "user-up"
+USER_DOWN_VERB = "user-down"
 DATABAG_FILE = "databag.yaml"
+OUTPUT_DATABAG_FILE = f"output_{DATABAG_FILE}"
 RES_DIR = "res"
 RES_KUSTOMIZER_DIR = os.path.join(RES_DIR, "kustomizer")
 RES_AWS_DIR = os.path.join(RES_DIR, "aws")
@@ -21,3 +24,5 @@ PATTERN_SOLARWINDS_PAPERTRAIL_FILE = "solarwinds_papertrail.yaml"
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"
 KUSTOMIZATION_FILE = "kustomization.yaml"
+KEY_INTERMEDIATE_DATABAG="intermediate_databag_file"
+KEY_EKSCTL_DATABAG="eksctl_databag_file"

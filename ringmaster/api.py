@@ -12,28 +12,41 @@ import re
 from ringmaster import constants as constants
 from .aws import run_cloudformation
 from .aws import load_eksctl_databag
-from .util import substitute_placeholders_in_file
 from .solarwinds_papertrail import install_solarwinds_papertrail
 from .util import run_cmd
+from .k8s import run_kubectl
+
 
 def download(url, filename):
     downloaded = requests.get(url, allow_redirects=True)
     open(filename, 'wb').write(downloaded.content)
 
 
-def load_databag(data):
-    if os.path.exists(constants.DATABAG_FILE):
-        with open(constants.DATABAG_FILE) as f:
+def load_databag(databag_file):
+    # users write values as JSON to this file and they are added to the
+    # databag incrementally
+    _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
+    _, eksctl_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster-eksctl")
+    data = {
+        "intermediate_databag_file":  intermediate_databag_file,
+        "eksctl_databag_file": eksctl_databag_file,
+        "msg_up_to_date": constants.MSG_UP_TO_DATE,
+        "name": os.path.basename(os.getcwd())
+    }
+    if os.path.exists(databag_file):
+        with open(databag_file) as f:
             data.update(yaml.safe_load(f))
 
         logger.debug(f"loaded databag contents: {data}")
 
     else:
-        logger.warning(f"missing databag: {constants.DATABAG_FILE}")
+        logger.warning(f"missing databag: {databag_file}")
+
+    return data
 
 
-
-def load_intermediate_databag(intermediate_databag_file, data):
+def load_intermediate_databag(data):
+    intermediate_databag_file = data[constants.KEY_INTERMEDIATE_DATABAG]
     if os.path.getsize(intermediate_databag_file):
         # grab stashed databag
         logger.debug(f"loading databag left by last stage from {intermediate_databag_file}")
@@ -47,30 +60,16 @@ def load_intermediate_databag(intermediate_databag_file, data):
         open(intermediate_databag_file, 'w').close()
 
 
-def run_kubectl(kubectl_file, verb, data):
-    # substitute ${...} variables from databag, bomb out if any missing
-    processed_file = substitute_placeholders_in_file(kubectl_file, data)
-    logger.debug(f"kubectl processed file: {processed_file}")
 
-    if verb == constants.UP_VERB:
-        kubectl_cmd = "apply"
-    elif verb == constants.DOWN_VERB:
-        kubectl_cmd = "delete"
-    else:
-        raise ValueError(f"invalid verb: {verb}")
-
-    run_cmd(f"kubectl {kubectl_cmd} -f {processed_file}", data)
-
-
-def do_stage(data, intermediate_databag_file, stage, verb):
+def do_stage(data, stage, verb):
     # bash scripts
     for bash_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
         logger.debug(f"shell script: {bash_script}")
         logger.info(bash_script)
         run_cmd(f"bash {bash_script}", data)
 
-        load_intermediate_databag(intermediate_databag_file, data)
-        load_eksctl_databag(data['eksctl_databag_file'], data)
+        load_intermediate_databag(data)
+        load_eksctl_databag(data)
 
     # cloudformation
     for cloudformation_file in glob.glob(f"{stage}/*{constants.PATTERN_CLOUDFORMATION_FILE}"):
@@ -94,37 +93,51 @@ def do_stage(data, intermediate_databag_file, stage, verb):
         logger.debug(f"solarwinds papertrail: {config_file}")
         install_solarwinds_papertrail(config_file, data)
 
+
 def down():
-    return run_dir(constants.DOWN_VERB)
+    return run_dir(
+        constants.DOWN_VERB,
+        load_databag(constants.DATABAG_FILE)
+    )
 
 
 def up():
-    return run_dir(constants.UP_VERB)
+    return run_dir(
+        constants.UP_VERB,
+        load_databag(constants.DATABAG_FILE)
+    )
 
 
-def run_dir(verb):
-    # users write values as JSON to this file and they are added to the
-    # databag incrementally
-    _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
-    _, eksctl_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster-eksctl")
-    data = {
-        "intermediate_databag_file":  intermediate_databag_file,
-        "eksctl_databag_file": eksctl_databag_file,
-        "msg_up_to_date": constants.MSG_UP_TO_DATE,
-        "name": os.path.basename(os.getcwd())
-    }
-    load_databag(data)
+def user_up():
+    return run_dir(
+        constants.USER_UP_VERB,
+        load_databag(constants.OUTPUT_DATABAG_FILE)
+    )
+
+
+def user_down():
+    return run_dir(
+        constants.USER_DOWN_VERB,
+        load_databag(constants.OUTPUT_DATABAG_FILE)
+    )
+
+
+def run_dir(verb, data):
 
     if os.path.exists(verb):
         logger.debug(f"found: {verb}")
         # for some reason the default order is reveresed when using ranges
         for stage in sorted(glob.glob(f"./{verb}/[0-9][0-9][0-9][0-9]")):
             logger.debug(f"stage: {stage}")
-            do_stage(data, intermediate_databag_file, stage, verb)
+            do_stage(data, stage, verb)
+
+        # cleanup
+        os.unlink(data[constants.KEY_INTERMEDIATE_DATABAG])
+        os.unlink(data[constants.KEY_EKSCTL_DATABAG])
+
+        # save the updated databag for use in normal operation
+        with open(constants.OUTPUT_DATABAG_FILE, "w") as f:
+            f.write("# generated by ringmaster, do not edit!\n")
+            yaml.dump(data, f)
     else:
         logger.error(f"missing directory: {verb}")
-
-    # cleanup
-    os.unlink(intermediate_databag_file)
-    os.unlink(eksctl_databag_file)
-

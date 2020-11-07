@@ -4,6 +4,8 @@ Usage:
   ringmaster [--debug] init --aws
   ringmaster [--debug] up
   ringmaster [--debug] down
+  ringmaster [--debug] user-up
+  ringmaster [--debug] user-down
   ringmaster --version
 
 Options:
@@ -21,6 +23,8 @@ from docopt import docopt
 from .aws import aws_init
 from .api import up
 from .api import down
+from .api import user_up
+from .api import user_down
 
 
 
@@ -41,6 +45,7 @@ def setup_logging(level, logger_name=None):
 
     logger.debug("====[debug mode enabled]====")
 
+
 def main():
     arguments = docopt(__doc__, version=pkg_resources.require("ringmaster")[0].version)
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
@@ -53,6 +58,11 @@ def main():
             exit_status = up()
         elif arguments['down']:
             exit_status = down()
+        elif arguments['user-up']:
+            exit_status = user_up()
+        elif arguments['user-down']:
+            exit_status = user_down()
+
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
         logger.error(str(exc_value))

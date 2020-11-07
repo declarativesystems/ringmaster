@@ -8,6 +8,7 @@ import json
 from .util import run_cmd
 from pathlib import Path
 from ringmaster import constants
+from .util import substitute_placeholders_in_file
 
 
 def copy_kustomization_files(root_dir, target_dir):
@@ -83,6 +84,21 @@ def register_k8s_secret(secret_namespace, secret_name, data):
     run_cmd(["kubectl", "apply", "-f", secret_file])
 
     os.unlink(secret_file)
+
+
+def run_kubectl(kubectl_file, verb, data):
+    # substitute ${...} variables from databag, bomb out if any missing
+    processed_file = substitute_placeholders_in_file(kubectl_file, data)
+    logger.debug(f"kubectl processed file: {processed_file}")
+
+    if verb == constants.UP_VERB or verb == constants.USER_UP_VERB:
+        kubectl_cmd = "apply"
+    elif verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB:
+        kubectl_cmd = "delete"
+    else:
+        raise ValueError(f"invalid verb: {verb}")
+
+    run_cmd(["kubectl", kubectl_cmd,  "-f", processed_file], data)
 
 
 def run_kustomizer(sources_dir, kubectl_cmd):

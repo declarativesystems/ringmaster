@@ -39,7 +39,8 @@ def filename_to_stack_name(cloudformation_file, data):
     return os.path.basename(cloudformation_file)\
         .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
 
-def load_eksctl_databag(eksctl_databag_file, data):
+def load_eksctl_databag(data):
+    eksctl_databag_file = data[constants.KEY_EKSCTL_DATABAG]
     if os.path.getsize(eksctl_databag_file):
         logger.debug(f"loading eksctl cluster info from from {eksctl_databag_file}")
         with open(eksctl_databag_file) as json_file:
@@ -149,7 +150,7 @@ def run_cloudformation(cloudformation_file, verb, data):
     template_body = pathlib.Path(cloudformation_file).read_text()
     act = False
 
-    if exists and verb == constants.UP_VERB:
+    if exists and (verb == constants.UP_VERB or verb == constants.USER_UP_VERB):
         # update
         def ensure_fn():
             return client.update_stack(
@@ -161,7 +162,7 @@ def run_cloudformation(cloudformation_file, verb, data):
 
         waiter_name = "stack_update_complete"
         act = True
-    elif exists and verb == constants.DOWN_VERB:
+    elif exists and (verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB):
         # delete
         def ensure_fn():
             return client.delete_stack(
@@ -169,7 +170,7 @@ def run_cloudformation(cloudformation_file, verb, data):
             )
         waiter_name = "stack_delete_complete"
         act = True
-    elif not exists and verb == constants.UP_VERB:
+    elif not exists and (verb == constants.UP_VERB or verb == constants.USER_UP_VERB):
         # create
         def ensure_fn():
             return client.create_stack(
@@ -180,7 +181,7 @@ def run_cloudformation(cloudformation_file, verb, data):
             )
         waiter_name = "stack_create_complete"
         act = True
-    elif not exists and verb == constants.DOWN_VERB:
+    elif not exists and (verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB):
         # already deleted
         logger.info(constants.MSG_UP_TO_DATE)
     else:
