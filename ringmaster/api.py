@@ -16,10 +16,14 @@ from .solarwinds_papertrail import install_solarwinds_papertrail
 from .util import run_cmd
 from .k8s import run_kubectl
 
+debug = False
+
 
 def download(url, filename):
     downloaded = requests.get(url, allow_redirects=True)
     open(filename, 'wb').write(downloaded.content)
+
+
 
 
 def load_databag(databag_file):
@@ -31,7 +35,8 @@ def load_databag(databag_file):
         "intermediate_databag_file":  intermediate_databag_file,
         "eksctl_databag_file": eksctl_databag_file,
         "msg_up_to_date": constants.MSG_UP_TO_DATE,
-        "name": os.path.basename(os.getcwd())
+        "name": os.path.basename(os.getcwd()),
+        "debug": "debug" if debug else ""
     }
     if os.path.exists(databag_file):
         with open(databag_file) as f:

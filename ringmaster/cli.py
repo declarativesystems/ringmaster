@@ -22,12 +22,13 @@ import sys
 from docopt import docopt
 
 from .aws import aws_init
-from .api import up
-from .api import down
-from .api import user_up
-from .api import user_down
+# from .api import up
+# from .api import down
+# from .api import user_up
+# from .api import user_down
+import ringmaster.api as api
 
-
+debug = False
 
 # color logs
 # https://stackoverflow.com/a/56944256/3441106
@@ -50,6 +51,7 @@ def setup_logging(level, logger_name=None):
 def main():
     arguments = docopt(__doc__, version=pkg_resources.require("ringmaster")[0].version)
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
+    api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")
     goto = arguments['--goto']
     exit_status = 1
@@ -57,13 +59,13 @@ def main():
         if arguments['init']:
             exit_status = aws_init()
         elif arguments['up']:
-            exit_status = up(goto)
+            exit_status = api.up(goto)
         elif arguments['down']:
-            exit_status = down(goto)
+            exit_status = api.down(goto)
         elif arguments['user-up']:
-            exit_status = user_up(goto)
+            exit_status = api.user_up(goto)
         elif arguments['user-down']:
-            exit_status = user_down(goto)
+            exit_status = api.user_down(goto)
 
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
