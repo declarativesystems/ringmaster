@@ -46,8 +46,9 @@ def load_eksctl_databag(eksctl_databag_file, data):
             # strip outer array
             extra_data = json.load(json_file)[0]
 
-        logger.debug(f"loaded items:{len(extra_data)} data:{extra_data}")
-        data.update(flatten_nested_dict(extra_data))
+        flattened_extra_data = flatten_nested_dict(extra_data)
+        logger.debug(f"loaded items:{len(flattened_extra_data)} data:{flattened_extra_data}")
+        data.update(flattened_extra_data)
 
         # empty the bag so we know to ignore it
         open(eksctl_databag_file, 'w').close()
@@ -129,8 +130,8 @@ def cloudformation_outputs(stack_name, prefixed_stack_name, data):
             # adjust the name each time and avoids tricks like eval in bash.
             # the downside of this is you need to know what stack generated the
             # output name
-            key_name = output["ExportName"].lower().replace("-", "_")
-            key_name = key_name.replace(f"{prefixed_stack_name}_", f"{stack_name}_")
+            key_name = output["ExportName"].replace(f"{prefixed_stack_name}-", f"{stack_name}-")\
+                .lower().replace("-", "_")
 
             string_value = str(output["OutputValue"])
             intermediate_databag[key_name] = string_value

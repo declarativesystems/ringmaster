@@ -15,6 +15,7 @@ loguru = "*"
 cfn-flip = "*"
 botocore = "*"
 halo = "*"
+pyyaml = "*"
 
 [requires]
 python_version = "3.6"

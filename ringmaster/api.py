@@ -8,11 +8,13 @@ import json
 import sys
 import tempfile
 from loguru import logger
-
+import re
 from ringmaster import constants as constants
 from .aws import run_cloudformation
 from .aws import load_eksctl_databag
-
+from .util import substitute_placeholders_in_file
+from .solarwinds_papertrail import install_solarwinds_papertrail
+from .util import run_cmd
 
 def download(url, filename):
     downloaded = requests.get(url, allow_redirects=True)
@@ -30,40 +32,6 @@ def load_databag(data):
         logger.warning(f"missing databag: {constants.DATABAG_FILE}")
 
 
-def convert_dict_values_to_string(data):
-    # all values passed to os.environ must be strings, avoid unwanted yaml help
-    for key in data:
-        data[key] = str(data[key])
-
-
-def merge_env(data):
-    env = os.environ.copy()
-    env.update(constants.RINGMASTER_ENV)
-    env.update(data)
-
-    convert_dict_values_to_string(env)
-    return env
-
-
-def run_cmd(cmd, data):
-    env = merge_env(data)
-    logger.debug(f"merged environment: {env}")
-
-    with subprocess.Popen(cmd,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=True,
-                          env=env) as proc:
-        while True:
-            output = proc.stdout.readline()
-            if proc.poll() is not None:
-                break
-            if output:
-                logger.log("OUTPUT", output.decode("UTF-8").strip())
-        rc = proc.poll()
-        logger.debug(f"result: {rc}")
-        return rc
-
 
 def load_intermediate_databag(intermediate_databag_file, data):
     if os.path.getsize(intermediate_databag_file):
@@ -79,26 +47,52 @@ def load_intermediate_databag(intermediate_databag_file, data):
         open(intermediate_databag_file, 'w').close()
 
 
+def run_kubectl(kubectl_file, verb, data):
+    # substitute ${...} variables from databag, bomb out if any missing
+    processed_file = substitute_placeholders_in_file(kubectl_file, data)
+    logger.debug(f"kubectl processed file: {processed_file}")
+
+    if verb == constants.UP_VERB:
+        kubectl_cmd = "apply"
+    elif verb == constants.DOWN_VERB:
+        kubectl_cmd = "delete"
+    else:
+        raise ValueError(f"invalid verb: {verb}")
+
+    run_cmd(f"kubectl {kubectl_cmd} -f {processed_file}", data)
+
+
 def do_stage(data, intermediate_databag_file, stage, verb):
     # bash scripts
     for bash_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
         logger.debug(f"shell script: {bash_script}")
         logger.info(bash_script)
-        rc = run_cmd(f"bash {bash_script}", data)
-        if rc:
-            # bomb out
-            raise RuntimeError(f"script {bash_script} - non zero exit status: {rc}")
+        run_cmd(f"bash {bash_script}", data)
 
         load_intermediate_databag(intermediate_databag_file, data)
         load_eksctl_databag(data['eksctl_databag_file'], data)
 
     # cloudformation
     for cloudformation_file in glob.glob(f"{stage}/*{constants.PATTERN_CLOUDFORMATION_FILE}"):
-        logger.debug(f"cloud formation: {cloudformation_file}")
+        logger.debug(f"Cloudformation: {cloudformation_file}")
         logger.info(cloudformation_file)
 
         data.update(run_cloudformation(cloudformation_file, verb, data))
 
+    # kubectl (will pre-process yaml files and replace ${variable} with
+    # variable from databag if present - looked at Kustomizer, too komplicated
+    for kubectl_file in glob.glob(f"{stage}/*{constants.PATTERN_KUBECTL_FILE}"):
+        logger.debug(f"kubectl: {kubectl_file}")
+        logger.info(kubectl_file)
+
+        run_kubectl(kubectl_file, verb, data)
+
+    #
+    # solarwinds papertrail
+    #
+    for config_file in glob.glob(f"{stage}/*{constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE}"):
+        logger.debug(f"solarwinds papertrail: {config_file}")
+        install_solarwinds_papertrail(config_file, data)
 
 def down():
     return run_dir(constants.DOWN_VERB)

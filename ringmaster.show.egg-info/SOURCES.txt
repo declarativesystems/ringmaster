@@ -6,6 +6,9 @@ ringmaster/api.py
 ringmaster/aws.py
 ringmaster/cli.py
 ringmaster/constants.py
+ringmaster/k8s.py
+ringmaster/solarwinds_papertrail.py
+ringmaster/util.py
 ringmaster.show.egg-info/PKG-INFO
 ringmaster.show.egg-info/SOURCES.txt
 ringmaster.show.egg-info/dependency_links.txt
