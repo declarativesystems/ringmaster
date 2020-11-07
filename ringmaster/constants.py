@@ -22,6 +22,7 @@ PATTERN_BASH = ".sh"
 PATTERN_KUBECTL_FILE = ".kubectl.yaml"
 PATTERN_SOLARWINDS_PAPERTRAIL_FILE = "solarwinds_papertrail.yaml"
 PATTERN_KUSTOMIZATION_FILE = "kustomization.yaml"
+PATTERN_RINGMASTER_PYTHON_FILE = "*.ringmaster.py"
 
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"

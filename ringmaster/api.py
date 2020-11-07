@@ -1,5 +1,6 @@
 import subprocess
 import pathlib
+import importlib
 import requests
 import os
 import glob
@@ -107,13 +108,30 @@ def do_kustomization(stage, verb):
         k8s.run_kustomizer(os.path.dirname(kustomization_file), kubectl_cmd)
 
 
+# see
+# https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
+def do_ringmaster_python(stage, data):
+    for ringmaster_python in glob.glob(f"{stage}/*{constants.PATTERN_RINGMASTER_PYTHON_FILE}"):
+        logger.info(f"ringmaster python: {ringmaster_python}")
+        # /foo/bar/baz.py -> baz
+        module_name, _ = os.path.splitext(os.path.basename(ringmaster_python))
+        spec = importlib.util.spec_from_file_location(module_name, ringmaster_python)
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+
+        # load data and run plugin
+        module.logger = logger
+        module.databag = data
+        module.main()
+
 def do_stage(data, stage, verb):
     do_kustomization(stage, verb)
     do_cloud_formation(stage, verb, data)
     do_kubectl(stage, verb, data)
     do_solarwinds_papertrail(stage, data)
     do_bash_script(stage, data)
-
+    do_ringmaster_python(stage, data)
 
 def down(goto):
     return run_dir(constants.DOWN_VERB, goto)
