@@ -18,7 +18,7 @@ from loguru import logger
 import pkg_resources
 import sys
 from docopt import docopt
-from .aws import aws_init
+import ringmaster.aws as aws
 import ringmaster.api as api
 import ringmaster.constants as constants
 
@@ -52,7 +52,7 @@ def main():
     try:
 
         if arguments['init']:
-            exit_status = aws_init()
+            exit_status = aws.aws_init()
         else:
             if arguments["down"]:
                 verb = constants.DOWN_VERB

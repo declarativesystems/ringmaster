@@ -1,22 +1,17 @@
 import re
 import subprocess
-import pathlib
-import requests
 import os
-import glob
-import yaml
 import json
-import sys
-import tempfile
 from loguru import logger
 import boto3
 import snakecase
 import pathlib
+import ringmaster.util as util
 from ringmaster import constants as constants
 from cfn_tools import load_yaml, dump_yaml
 import botocore.exceptions
 from halo import Halo
-
+import shutil
 from ringmaster.util import flatten_nested_dict
 
 RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
@@ -28,12 +23,21 @@ ERROR_AWS = r"encountered a terminal failure state"
 ERROR_MISSING = r"does not exist"
 
 def aws_init():
-    vendor_cfn_dir = ".vendor/aws/cloudformation"
-    logger.info("Initialising ringmaster for AWS...")
-    pathlib.Path(vendor_cfn_dir).mkdir(parents=True, exist_ok=True)
-    vendor_vpc_cfn=os.path.join(vendor_cfn_dir, "vpc.yaml")
-    # download(vendor_vpc_cfn)
+    # copy files in res/aws to project dir
+    if os.path.exists(os.path.expanduser(constants.AWS_USER_TEMPLATE_DIR)):
+        source_dir = os.path.expanduser(constants.AWS_USER_TEMPLATE_DIR)
+    else:
+        source_dir = os.path.join(
+            os.path.dirname(
+                os.path.realpath(__file__)
+            ),
+            constants.AWS_TEMPLATE_DIR
+        )
+    logger.info(f"installing templates from {source_dir}...")
 
+    # shutils.copytree doesnt work until python 3.8 as need to overwrite dest
+    # TIL: https://askubuntu.com/a/86891/594199
+    util.run_cmd(["cp", "-a", f"{source_dir}/.", "."])
 
 # databag:
 #   + cluster_vpc_cidr

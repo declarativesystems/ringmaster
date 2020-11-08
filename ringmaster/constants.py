@@ -23,3 +23,6 @@ SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"
 
 KEY_INTERMEDIATE_DATABAG="intermediate_databag_file"
 KEY_EKSCTL_DATABAG="eksctl_databag_file"
+
+AWS_TEMPLATE_DIR = "res/aws"
+AWS_USER_TEMPLATE_DIR = "~/.ringmaster/res/aws"

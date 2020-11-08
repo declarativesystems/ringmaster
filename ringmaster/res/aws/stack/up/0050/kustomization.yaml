@@ -1,0 +1,5 @@
+# source: https://raw.githubusercontent.com/aws/eks-charts/master/stable/aws-load-balancer-controller/crds/kustomization.yaml
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - crds.yaml
