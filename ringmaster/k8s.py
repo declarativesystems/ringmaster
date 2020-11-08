@@ -104,7 +104,7 @@ def do_kubectl(filename, verb, data):
 
 def do_kustomizer(filename, verb, data=None):
     logger.info(f"kustomizer: {filename}")
-    kubectl_cmd = "apply" if verb == constants.UP_VERB or verb == constants.USER_UP_VERB else "delete"
+    kubectl_cmd = "apply" if verb == constants.UP_VERB else "delete"
     sources_dir = os.path.dirname(filename)
 
     run_cmd(["kubectl", kubectl_cmd, "-k", sources_dir])

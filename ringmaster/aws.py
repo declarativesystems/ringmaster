@@ -218,7 +218,7 @@ def do_cloudformation(filename, verb, data):
     template_body = pathlib.Path(filename).read_text()
     act = False
 
-    if exists and (verb == constants.UP_VERB or verb == constants.USER_UP_VERB):
+    if exists and verb == constants.UP_VERB:
         # update
         def ensure_fn():
             return client.update_stack(
@@ -230,7 +230,7 @@ def do_cloudformation(filename, verb, data):
 
         waiter_name = "stack_update_complete"
         act = True
-    elif exists and (verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB):
+    elif exists and verb == constants.DOWN_VERB:
         # delete
         def ensure_fn():
             return client.delete_stack(
@@ -238,7 +238,7 @@ def do_cloudformation(filename, verb, data):
             )
         waiter_name = "stack_delete_complete"
         act = True
-    elif not exists and (verb == constants.UP_VERB or verb == constants.USER_UP_VERB):
+    elif not exists and verb == constants.UP_VERB:
         # create
         def ensure_fn():
             return client.create_stack(
@@ -249,7 +249,7 @@ def do_cloudformation(filename, verb, data):
             )
         waiter_name = "stack_create_complete"
         act = True
-    elif not exists and (verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB):
+    elif not exists and verb == constants.DOWN_VERB:
         # already deleted
         logger.info(constants.MSG_UP_TO_DATE)
     else:
