@@ -3,21 +3,12 @@ UP_VERB = "up"
 DOWN_VERB = "down"
 DATABAG_FILE = "databag.yaml"
 OUTPUT_DATABAG_FILE = f"output_{DATABAG_FILE}"
-RES_DIR = "res"
-RES_KUSTOMIZER_DIR = os.path.join(RES_DIR, "kustomizer")
-RES_AWS_DIR = os.path.join(RES_DIR, "aws")
-RES_AWS_IAM_DIR = os.path.join(RES_AWS_DIR, "iam")
-RES_KUSTOMIZER_RKUBELOG_DIR = os.path.join(RES_KUSTOMIZER_DIR, "rkubelog")
-RINGMASTER_ENV = {
-    "res_dir": RES_DIR,
-    "res_kustomizer": RES_KUSTOMIZER_DIR,
-    "res_aws_dir": RES_AWS_DIR,
-    "res_aws_iam_dir": RES_AWS_IAM_DIR,
-    "res_kustomizer_rkubelog_dir": RES_KUSTOMIZER_RKUBELOG_DIR,
-}
 
 STACK_DIR = "stack"
 USER_DIR = "user"
+
+# if we download files, put them inside this directory so we know to skip
+SKIP_DIR = "download"
 
 PATTERN_CLOUDFORMATION_FILE = ".cloudformation.yaml"
 PATTERN_BASH = ".sh"

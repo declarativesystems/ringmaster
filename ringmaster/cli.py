@@ -15,16 +15,10 @@ Options:
 """
 
 from loguru import logger
-import traceback
 import pkg_resources
 import sys
 from docopt import docopt
-
 from .aws import aws_init
-# from .api import up
-# from .api import down
-# from .api import user_up
-# from .api import user_down
 import ringmaster.api as api
 import ringmaster.constants as constants
 

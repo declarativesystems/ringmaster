@@ -122,6 +122,9 @@ def do_file(filename, verb, data):
 
 def do_stage(data, stage, verb):
     for root, dirs, files in os.walk(stage, topdown=True, followlinks=True):
+        # modify dirs in-place to exclude dirs to skip and all their children
+        # https://stackoverflow.com/a/19859907/3441106
+        dirs[:] = list(filter(lambda x: not x == constants.SKIP_DIR, dirs))
         for file in files:
             filename = os.path.join(root, file)
             do_file(filename, verb, data)

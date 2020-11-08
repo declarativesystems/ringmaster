@@ -1,10 +1,9 @@
 import re
-import tempfile
 import os
 from . import constants
 from loguru import logger
 import subprocess
-
+import pathlib
 
 def convert_dict_values_to_string(data):
     # all values passed to os.environ must be strings, avoid unwanted yaml help
@@ -14,7 +13,6 @@ def convert_dict_values_to_string(data):
 
 def merge_env(data):
     env = os.environ.copy()
-    env.update(constants.RINGMASTER_ENV)
     env.update(data)
 
     convert_dict_values_to_string(env)
