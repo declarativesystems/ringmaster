@@ -75,7 +75,6 @@ def do_bash_script(filename, verb, data):
     aws.load_eksctl_databag(data)
 
 
-
 # see
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
 def do_ringmaster_python(filename, verb, data):
@@ -129,11 +128,11 @@ def do_stage(data, stage, verb):
 
 
 def stack(start, verb):
-    return run_dir(verb, start, verb)
+    return run_dir(os.path.join(constants.STACK_DIR, verb), start, verb)
 
 
 def user(start, verb):
-    return run_dir(f"user-{verb}", start, verb)
+    return run_dir(os.path.join(constants.USER_DIR, verb), start, verb)
 
 
 def run(filename, verb):

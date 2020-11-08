@@ -1,8 +1,6 @@
 import os
 UP_VERB = "up"
 DOWN_VERB = "down"
-USER_UP_VERB = "user-up"
-USER_DOWN_VERB = "user-down"
 DATABAG_FILE = "databag.yaml"
 OUTPUT_DATABAG_FILE = f"output_{DATABAG_FILE}"
 RES_DIR = "res"
@@ -17,6 +15,10 @@ RINGMASTER_ENV = {
     "res_aws_iam_dir": RES_AWS_IAM_DIR,
     "res_kustomizer_rkubelog_dir": RES_KUSTOMIZER_RKUBELOG_DIR,
 }
+
+STACK_DIR = "stack"
+USER_DIR = "user"
+
 PATTERN_CLOUDFORMATION_FILE = ".cloudformation.yaml"
 PATTERN_BASH = ".sh"
 PATTERN_KUBECTL_FILE = ".kubectl.yaml"
