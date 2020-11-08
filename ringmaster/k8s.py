@@ -86,14 +86,15 @@ def register_k8s_secret(secret_namespace, secret_name, data):
     os.unlink(secret_file)
 
 
-def run_kubectl(kubectl_file, verb, data):
+def do_kubectl(filename, verb, data):
     # substitute ${...} variables from databag, bomb out if any missing
-    processed_file = substitute_placeholders_in_file(kubectl_file, data)
+    logger.info(f"kubectl: {filename}")
+    processed_file = substitute_placeholders_in_file(filename, data)
     logger.debug(f"kubectl processed file: {processed_file}")
 
-    if verb == constants.UP_VERB or verb == constants.USER_UP_VERB:
+    if verb == constants.UP_VERB:
         kubectl_cmd = "apply"
-    elif verb == constants.DOWN_VERB or verb == constants.USER_DOWN_VERB:
+    elif verb == constants.DOWN_VERB:
         kubectl_cmd = "delete"
     else:
         raise ValueError(f"invalid verb: {verb}")
@@ -101,5 +102,9 @@ def run_kubectl(kubectl_file, verb, data):
     run_cmd(["kubectl", kubectl_cmd,  "-f", processed_file], data)
 
 
-def run_kustomizer(sources_dir, kubectl_cmd):
+def do_kustomizer(filename, verb, data=None):
+    logger.info(f"kustomizer: {filename}")
+    kubectl_cmd = "apply" if verb == constants.UP_VERB or verb == constants.USER_UP_VERB else "delete"
+    sources_dir = os.path.dirname(filename)
+
     run_cmd(["kubectl", kubectl_cmd, "-k", sources_dir])

@@ -1,5 +1,3 @@
-import subprocess
-import pathlib
 import importlib
 import requests
 import os
@@ -9,13 +7,11 @@ import json
 import sys
 import tempfile
 from loguru import logger
-import re
 from ringmaster import constants as constants
-from .aws import run_cloudformation
-from .aws import load_eksctl_databag
-from .solarwinds_papertrail import install_solarwinds_papertrail
+import ringmaster.solarwinds_papertrail as solarwinds_papertrail
 from .util import run_cmd
 import ringmaster.k8s as k8s
+import ringmaster.aws as aws
 
 debug = False
 
@@ -70,100 +66,101 @@ def load_intermediate_databag(data):
         open(intermediate_databag_file, 'w').close()
 
 
-def do_bash_script(stage, data):
+def do_bash_script(filename, verb, data):
     # bash scripts
-    for bash_script in glob.glob(f"{stage}/*{constants.PATTERN_BASH}"):
-        logger.info(f"bash script: {bash_script}")
-        run_cmd(f"bash {bash_script}", data)
+    logger.info(f"bash script: {filename}")
+    run_cmd(f"bash {filename}", data)
 
-        load_intermediate_databag(data)
-        load_eksctl_databag(data)
+    load_intermediate_databag(data)
+    aws.load_eksctl_databag(data)
 
-
-def do_cloud_formation(stage, verb, data):
-    # cloudformation
-    for cloudformation_file in glob.glob(f"{stage}/*{constants.PATTERN_CLOUDFORMATION_FILE}"):
-        logger.info(f"cloudformation {cloudformation_file}")
-        data.update(run_cloudformation(cloudformation_file, verb, data))
-
-
-def do_kubectl(stage, verb, data):
-    # kubectl (will pre-process yaml files and replace ${variable} with
-    # variable from databag if present - looked at Kustomizer, too komplicated
-    for kubectl_file in glob.glob(f"{stage}/*{constants.PATTERN_KUBECTL_FILE}"):
-        logger.info(f"kubectl: {kubectl_file}")
-        k8s.run_kubectl(kubectl_file, verb, data)
-
-
-def do_solarwinds_papertrail(stage, data):
-    for config_file in glob.glob(f"{stage}/*{constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE}"):
-        logger.info(f"solarwinds papertrail: {config_file}")
-        install_solarwinds_papertrail(config_file, data)
-
-
-def do_kustomization(stage, verb):
-    for kustomization_file in glob.glob(f"{stage}/*{constants.PATTERN_KUSTOMIZATION_FILE}"):
-        logger.info(f"kustomization: {kustomization_file}")
-        kubectl_cmd = "apply" if verb == constants.UP_VERB or verb == constants.USER_UP_VERB else "delete"
-        k8s.run_kustomizer(os.path.dirname(kustomization_file), kubectl_cmd)
 
 
 # see
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-def do_ringmaster_python(stage, data):
-    for ringmaster_python in glob.glob(f"{stage}/*{constants.PATTERN_RINGMASTER_PYTHON_FILE}"):
-        logger.info(f"ringmaster python: {ringmaster_python}")
-        # /foo/bar/baz.py -> baz
-        module_name, _ = os.path.splitext(os.path.basename(ringmaster_python))
-        spec = importlib.util.spec_from_file_location(module_name, ringmaster_python)
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
+def do_ringmaster_python(filename, verb, data):
+    logger.info(f"ringmaster python: {filename}")
+    # /foo/bar/baz.py -> baz
+    module_name, _ = os.path.splitext(os.path.basename(filename))
+    spec = importlib.util.spec_from_file_location(module_name, filename)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
 
-        # load data and run plugin
-        module.logger = logger
-        module.databag = data
-        module.main()
+    # load data and run plugin
+    module.logger = logger
+    module.databag = data
+    module.main()
+
+
+handlers = {
+    constants.PATTERN_BASH: do_bash_script,
+    constants.PATTERN_CLOUDFORMATION_FILE: aws.do_cloudformation,
+    constants.PATTERN_KUBECTL_FILE: k8s.do_kubectl,
+    constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.setup,
+    constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,
+    constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
+    constants.PATTERN_EKS_CLUSTER_INFO: aws.do_eks_cluster_info
+}
+
+
+def get_handler_for_file(filename):
+    handler = None
+    for pattern in  handlers.keys():
+        if filename.endswith(pattern):
+            handler = handlers[pattern]
+            break
+    return handler
+
+
+def do_file(filename, verb, data):
+    handler = get_handler_for_file(filename)
+    if handler:
+        handler(filename, verb, data)
+    else:
+        logger.info(f"no handler for {filename} - skipped")
+
 
 def do_stage(data, stage, verb):
-    do_kustomization(stage, verb)
-    do_cloud_formation(stage, verb, data)
-    do_kubectl(stage, verb, data)
-    do_solarwinds_papertrail(stage, data)
-    do_bash_script(stage, data)
-    do_ringmaster_python(stage, data)
-
-def down(goto):
-    return run_dir(constants.DOWN_VERB, goto)
+    for root, dirs, files in os.walk(stage, topdown=True, followlinks=True):
+        for file in files:
+            filename = os.path.join(root, file)
+            do_file(filename, verb, data)
 
 
-def up(goto):
-    return run_dir(constants.UP_VERB,goto)
+def stack(start, verb):
+    return run_dir(start, verb)
 
 
-def user_up(goto):
-    return run_dir(constants.USER_UP_VERB,goto)
+def user(start, verb):
+    return run_dir(start, verb)
 
 
-def user_down(goto):
-    return run_dir(constants.USER_DOWN_VERB, goto)
+def run(filename, verb):
+    if os.path.exists(filename):
+        databag_file = constants.OUTPUT_DATABAG_FILE \
+            if os.path.exists(constants.OUTPUT_DATABAG_FILE) else constants.DATABAG_FILE
+        data = load_databag(databag_file)
+        do_file(filename, verb, data)
+    else:
+        logger.error(f"file not found: {filename}")
 
 
-def run_dir(verb, goto):
+def run_dir(start, verb):
     if os.path.exists(verb):
         logger.debug(f"found: {verb}")
         started = False
 
-        if goto == "0010":
-            data = load_databag(constants.DATABAG_FILE)
-        else:
-            data = load_databag(constants.OUTPUT_DATABAG_FILE)
+        databag_file = constants.OUTPUT_DATABAG_FILE \
+            if os.path.exists(constants.OUTPUT_DATABAG_FILE) \
+            else constants.DATABAG_FILE
+        data = load_databag(databag_file)
 
         # for some reason the default order is reveresed when using ranges
         for stage in sorted(glob.glob(f"./{verb}/[0-9][0-9][0-9][0-9]")):
             if not started:
                 number = os.path.basename(stage)
-                if number == goto:
+                if number == start:
                     started = True
 
             if started:
@@ -171,7 +168,7 @@ def run_dir(verb, goto):
                 do_stage(data, stage, verb)
 
         if not started:
-            logger.error(f"goto dir - not found: {goto}")
+            logger.error(f"start dir - not found: {start}")
 
         # cleanup
         logger.debug("delete intermediate databag")

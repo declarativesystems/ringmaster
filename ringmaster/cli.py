@@ -2,17 +2,16 @@
 
 Usage:
   ringmaster [--debug] init --aws
-  ringmaster [--debug] up [--goto=<dir>]
-  ringmaster [--debug] down [--goto=<dir>]
-  ringmaster [--debug] user-up [--goto=<dir>]
-  ringmaster [--debug] user-down [--goto=<dir>]
+  ringmaster [--debug] stack (up|down) [--start=<dir>]
+  ringmaster [--debug] user (up|down) [--start=<dir>]
+  ringmaster [--debug] run (up|down) <filename>
   ringmaster --version
 
 Options:
   -h --help     Show this screen.
   --version     Show version.
   --debug       Extra debugging messages
-  --goto=<dir>  Start from <dir> [default: 0010]
+  --start=<dir>  Start from <dir> [default: 0010]
 """
 
 from loguru import logger
@@ -27,6 +26,7 @@ from .aws import aws_init
 # from .api import user_up
 # from .api import user_down
 import ringmaster.api as api
+import ringmaster.constants as constants
 
 debug = False
 
@@ -53,19 +53,26 @@ def main():
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")
-    goto = arguments['--goto']
+    start = arguments['--start']
     exit_status = 1
     try:
+
         if arguments['init']:
             exit_status = aws_init()
-        elif arguments['up']:
-            exit_status = api.up(goto)
-        elif arguments['down']:
-            exit_status = api.down(goto)
-        elif arguments['user-up']:
-            exit_status = api.user_up(goto)
-        elif arguments['user-down']:
-            exit_status = api.user_down(goto)
+        else:
+            if arguments["down"]:
+                verb = constants.DOWN_VERB
+            elif arguments["up"]:
+                verb = constants.UP_VERB
+            else:
+                raise RuntimeError("one of (up|down) is required")
+
+            if arguments["user"]:
+                exit_status = api.user(start, verb)
+            elif arguments["run"]:
+                exit_status = api.run(arguments['<filename>'], verb)
+            elif arguments["stack"]:
+                exit_status = api.stack(start, verb)
 
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()

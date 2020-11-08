@@ -35,6 +35,55 @@ def aws_init():
     # download(vendor_vpc_cfn)
 
 
+# databag:
+#   + cluster_vpc_cidr
+#   + cluster_private_subnets
+#   + cluster_private_subnet_{n}
+#   + cluster_public_subnets
+#   + cluster_public_subnet_{n}
+def do_eks_cluster_info(filename, verb, data):
+    logger.info(f"eks cluster info: {filename}")
+    ec2 = boto3.client('ec2')
+    try:
+
+        # VPC CIDR block
+        response = ec2.describe_vpcs(
+            Filters=[{
+                'Name': 'vpc-id',
+                'Values': [data['resourcesvpcconfig_vpcid']]
+            }]
+        )
+        vpc_cidr_value = response["Vpcs"][0]["CidrBlock"]
+        data["cluster_vpc_cidr"] = vpc_cidr_value
+
+        # subnets
+        response = ec2.describe_subnets(
+            Filters=[{
+                'Name': 'vpc-id',
+                'Values': [data['resourcesvpcconfig_vpcid']]
+            }]
+        )
+
+        private_subnets = list(filter(lambda x: x["MapPublicIpOnLaunch"], response["Subnets"]))
+        private_subnet_ids = list(map(lambda x: x["SubnetId"], private_subnets))
+        public_subnets = list(filter(lambda x: not x["MapPublicIpOnLaunch"], response["Subnets"]))
+        public_subnet_ids = list(map(lambda x: x["SubnetId"], public_subnets))
+        # join on whitespace - default separator for bash and python
+        data["cluster_private_subnets"] = private_subnet_ids
+        data["cluster_public_subnets"] = public_subnet_ids
+
+        # flattened subnet ids for cloudformation/bash
+        for i, value in enumerate(private_subnet_ids):
+            data[f"cluster_private_subnet_{i}"] = value
+
+        for i, value in enumerate(public_subnet_ids):
+            data[f"cluster_public_subnet_{i}"] = value
+
+    except KeyError as e:
+        raise RuntimeError(
+            f"missing required field in in databag: {e} - EKS cluster created yet?"
+        )
+
 def filename_to_stack_name(cloudformation_file, data):
     return os.path.basename(cloudformation_file)\
         .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
@@ -81,14 +130,25 @@ def stack_params(cloudformation_file, data):
             # cloudformation parameters are usually camel case but databag
             # parameters are usually snake case - use an exact match followed
             # by snake case
+            snakecase_param = snakecase.convert(cfn_param)
+
+            # convert `number` to `_number` to match databag
+            matched = re.match(r"[^\d]*(\d+)[^\d]*", snakecase_param)
+            if matched:
+                for match in matched.groups():
+                    snakecase_param = snakecase_param.replace(match, f"_{match}")
+
             if data.get(cfn_param):
                 params.append(cloudformation_param(cfn_param, data.get(cfn_param)))
-            elif data.get(snakecase.convert(cfn_param)):
-                params.append(cloudformation_param(cfn_param, data.get(snakecase.convert(cfn_param))))
+            elif data.get(snakecase_param):
+                params.append(cloudformation_param(cfn_param, data.get(snakecase_param)))
             elif cloudformation["Parameters"][cfn_param].get("Default"):
                 logger.debug(f"Using cloudformation default for {cfn_param}")
             else:
-                raise RuntimeError(f"Cloudformation file:{cloudformation_file} missing parameter:{cfn_param}")
+                raise RuntimeError(
+                    f"Cloudformation file:{cloudformation_file} missing param:{cfn_param} "
+                        f"expected databag:{snakecase_param}"
+                )
     else:
         logger.debug(f"no Parameters section in {cloudformation_file}")
 
@@ -143,13 +203,15 @@ def cloudformation_outputs(stack_name, prefixed_stack_name, data):
     return intermediate_databag
 
 
-def run_cloudformation(cloudformation_file, verb, data):
-    stack_name = filename_to_stack_name(cloudformation_file, data)
+def do_cloudformation(filename, verb, data):
+    logger.info(f"cloudformation {filename}")
+
+    stack_name = filename_to_stack_name(filename, data)
     prefixed_stack_name = f"{data['name']}-{stack_name}"
-    params = stack_params(cloudformation_file, data)
+    params = stack_params(filename, data)
     client = boto3.client('cloudformation')
     exists = stack_exists(prefixed_stack_name)
-    template_body = pathlib.Path(cloudformation_file).read_text()
+    template_body = pathlib.Path(filename).read_text()
     act = False
 
     if exists and (verb == constants.UP_VERB or verb == constants.USER_UP_VERB):
@@ -191,12 +253,12 @@ def run_cloudformation(cloudformation_file, verb, data):
 
     if act:
         logger.debug(
-            f"cloudformation stack:{prefixed_stack_name} file: {cloudformation_file}"
+            f"cloudformation stack:{prefixed_stack_name} file: {filename}"
         )
 
         # do the deed...
         try:
-            with Halo(text=f"Cloudformation {cloudformation_file}", spinner='dots'):
+            with Halo(text=f"Cloudformation {filename}", spinner='dots'):
                 response = ensure_fn()
                 logger.debug(f"response: {response}")
 
@@ -230,7 +292,7 @@ def run_cloudformation(cloudformation_file, verb, data):
     else:
         intermediate_data = cloudformation_outputs(stack_name, prefixed_stack_name, data)
 
-    return intermediate_data
+    data.update(intermediate_data)
 
 
 def check_requirements():
