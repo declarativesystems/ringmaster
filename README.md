@@ -1,5 +1,19 @@
 # ringmaster
-
+```
+         _
+       _[_]_
+       _(_)______.-'`-.
+      /, >< ,----'     `-._.-'*
+      \\|::|  Welcome to the Circus
+        |/\|  We already got enough Clowns,
+        ||||  You got any experiance with
+        ||||  Being shot from a canon??
+     __(_/\_)
+    /`-..__.,-'\
+   /   __/\__   \
+   `._ \    / _.'MJP
+      ``|/\|-'
+```
 ## Quickstart
 
 ### 1. Setup
