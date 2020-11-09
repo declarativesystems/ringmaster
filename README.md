@@ -19,7 +19,7 @@
 ### 1. Setup
 
 ```shell
-# not working yet  .... ringmaster init --aws
+# ringmaster init --aws
 ```
 
 Grab a bunch of cloudformation scripts off amazon 
@@ -27,11 +27,86 @@ Grab a bunch of cloudformation scripts off amazon
 ### 2. Create (VPC) and cluster
 
 ```shell
-ringmaster up
+ringmaster stack up
 ```
 
 
 ## Reference
+
+### Concepts
+
+#### Databag
+
+The databag is a key-value store (`dict`) that is loaded with values from 
+`databag.yaml` initially and then accumulates other values of interest as the
+stack is built. It is serialised to `output_databag.yaml` as a run completes.
+
+The contents of the databag are made available as each step is processed. This
+lets us do things like lookup EKS details such as public/private subnet IDs and
+use the values directly in later steps.
+
+#### AWS Authentication
+This is handled directly by the 
+[Boto3 API](https://aws.amazon.com/sdk-for-python/) which uses the files in 
+`~/.aws` to configure credentials.
+
+The default _profile_ will be used automatically, use the `AWS_PROFILE` 
+environment variable to use a different one:
+
+```
+AWS_PROFILE="someprofile" ringmaster ...
+```
+
+All work is done inside a single region which is controlled by databag value:
+```
+aws_region: "us-east-1" # eg
+```
+
+ 
+
+
+### Directory structure
+
+```
+.
+├── databag.yaml
+├── output_databag.yaml
+└── stack
+    ├── down
+    │     ├── 0010
+    │     │     └── cluster.sh
+    │     └── 0020
+    │         └── infra.cloudformation.yaml -> ../../shared/infra.cloudformation.yaml
+    ├── shared
+    │     └── infra.cloudformation.yaml
+    └── up
+        ├── 0010
+        │     └── infra.cloudformation.yaml -> ../../shared/infra.cloudformation.yaml
+        ├── 0020
+        │     └── cluster.sh
+        ├── 0030
+        │     └── get_eks_cluster_info
+        ├── 0040
+        │     ├── iam_policy.json
+        │     └── load_balancer_iam.sh
+        ├── 0050
+        │     └── iam_service_account.sh
+        ├── 0060
+        │     ├── crds.yaml
+        │     ├── deploy_load_balancer.sh
+        │     └── kustomization.yaml
+        ├── 0070
+        │     ├── csidriver.kubectl.yaml
+        │     └── storage_security_groups.ringmaster.py
+        ├── 0080
+        │     ├── claim.kubectl.yaml
+        │     ├── pv.kubectl.yaml
+        │     └── storageclass.kubectl.yaml
+        └── 0090
+            └── solarwinds_papertrail.yaml
+
+```
+
 
 ### filetypes
 

@@ -3,7 +3,6 @@ import botocore.exceptions
 import re
 
 logger = None
-ec2 = boto3.client('ec2')
 
 # used for testing - ringmaster inserts updated values
 databag = {
@@ -43,7 +42,7 @@ def get_security_group_id():
     )
     return response["SecurityGroups"][0]['GroupId'] if len(response["SecurityGroups"]) else None
 
-def ensure_security_group():
+def ensure_security_group(ec2):
     security_group_name = get_security_group_name()
     security_group_id = get_security_group_id()
     if security_group_id:
@@ -82,7 +81,7 @@ def ensure_security_group():
     return security_group_id
 
 
-def ensure_mount_target(security_group_id, subnet_id):
+def ensure_mount_target(ec2, security_group_id, subnet_id):
     client = boto3.client('efs')
     response = client.describe_mount_targets(
         FileSystemId=databag["infra_efs"]
@@ -103,9 +102,10 @@ def ensure_mount_target(security_group_id, subnet_id):
 
 
 def main():
-    security_group_id = ensure_security_group()
+    ec2 = boto3.client('ec2', region_name=databag["aws_region"])
+    security_group_id = ensure_security_group(ec2)
     for subnet_id in databag["cluster_private_subnets"]:
-        ensure_mount_target(security_group_id, subnet_id)
+        ensure_mount_target(ec2, security_group_id, subnet_id)
 
     databag["cluster_efs_sg"] = security_group_id
     logger.info("done!")

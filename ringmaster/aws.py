@@ -87,6 +87,11 @@ def do_eks_cluster_info(filename, verb, data):
         raise RuntimeError(
             f"missing required field in in databag: {e} - EKS cluster created yet?"
         )
+    except IndexError as e:
+        raise RuntimeError(
+            f"No data returned for this EKS cluster: {e} - EKS cluster created yet?"
+        )
+
 
 def filename_to_stack_name(cloudformation_file, data):
     return os.path.basename(cloudformation_file)\

@@ -16,7 +16,7 @@ else
     --set clusterName="$cluster_name" \
     --set serviceAccount.create=false \
     --set serviceAccount.name="$aws_load_balancer_controller_service_name" \
-    --set region="$region" --set vpcId="$resourcesvpcconfig_vpcid" \
+    --set region="$aws_region" --set vpcId="$resourcesvpcconfig_vpcid" \
     -n kube-system
 
   # wait a while, say the special prayer:
