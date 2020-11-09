@@ -26,7 +26,8 @@ databag = {
 def get_security_group_name():
     return f"{databag['cluster_name']}-efs-sg"
 
-def get_security_group_id():
+
+def get_security_group_id(ec2):
     security_group_name = get_security_group_name()
 
     # check if we are up-to-date...
@@ -42,9 +43,10 @@ def get_security_group_id():
     )
     return response["SecurityGroups"][0]['GroupId'] if len(response["SecurityGroups"]) else None
 
+
 def ensure_security_group(ec2):
     security_group_name = get_security_group_name()
-    security_group_id = get_security_group_id()
+    security_group_id = get_security_group_id(ec2)
     if security_group_id:
         logger.info(f"security group {security_group_name} already exists")
     else:
@@ -81,8 +83,8 @@ def ensure_security_group(ec2):
     return security_group_id
 
 
-def ensure_mount_target(ec2, security_group_id, subnet_id):
-    client = boto3.client('efs')
+def ensure_mount_target(security_group_id, subnet_id):
+    client = boto3.client('efs', region_name=databag["aws_region"])
     response = client.describe_mount_targets(
         FileSystemId=databag["infra_efs"]
     )
@@ -105,7 +107,7 @@ def main():
     ec2 = boto3.client('ec2', region_name=databag["aws_region"])
     security_group_id = ensure_security_group(ec2)
     for subnet_id in databag["cluster_private_subnets"]:
-        ensure_mount_target(ec2, security_group_id, subnet_id)
+        ensure_mount_target(security_group_id, subnet_id)
 
     databag["cluster_efs_sg"] = security_group_id
     logger.info("done!")
