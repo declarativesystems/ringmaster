@@ -152,7 +152,8 @@ def stack_params(cloudformation_file, data):
                 params.append(cloudformation_param(cfn_param, data.get(cfn_param)))
             elif data.get(snakecase_param):
                 params.append(cloudformation_param(cfn_param, data.get(snakecase_param)))
-            elif cloudformation["Parameters"][cfn_param].get("Default"):
+            elif "Default" in cloudformation["Parameters"][cfn_param]:
+                # cloudformation allows the empty string as a default
                 logger.debug(f"Using cloudformation default for {cfn_param}")
             else:
                 raise RuntimeError(
