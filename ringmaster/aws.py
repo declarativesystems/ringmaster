@@ -46,8 +46,9 @@ def aws_init():
 #   + cluster_public_subnets
 #   + cluster_public_subnet_{n}
 def do_eks_cluster_info(filename, verb, data):
+    sanity_check(data)
     logger.info(f"eks cluster info: {filename}")
-    ec2 = boto3.client('ec2')
+    ec2 = boto3.client('ec2', region_name=data["aws_region"])
     try:
 
         # VPC CIDR block
@@ -164,8 +165,7 @@ def stack_params(cloudformation_file, data):
     return params
 
 
-def stack_exists(stack_name):
-    client = boto3.client('cloudformation')
+def stack_exists(client, stack_name):
     logger.debug(f"cloudformation - describe_stacks: {stack_name}")
     try:
         response = client.describe_stacks(
@@ -186,8 +186,7 @@ def stack_exists(stack_name):
     return exists
 
 
-def cloudformation_outputs(stack_name, prefixed_stack_name, data):
-    client = boto3.client('cloudformation')
+def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
     response = client.describe_stacks(
         StackName=prefixed_stack_name,
     )
@@ -209,17 +208,18 @@ def cloudformation_outputs(stack_name, prefixed_stack_name, data):
             intermediate_databag[key_name] = string_value
 
     logger.debug(f"cloudformation - outputs:{len(intermediate_databag)} value: {intermediate_databag}")
-    return intermediate_databag
+    data.update(intermediate_databag)
 
 
 def do_cloudformation(filename, verb, data):
+    sanity_check(data)
     logger.info(f"cloudformation {filename}")
 
     stack_name = filename_to_stack_name(filename, data)
     prefixed_stack_name = f"{data['name']}-{stack_name}"
     params = stack_params(filename, data)
-    client = boto3.client('cloudformation')
-    exists = stack_exists(prefixed_stack_name)
+    client = boto3.client('cloudformation', region_name=data["aws_region"])
+    exists = stack_exists(client, prefixed_stack_name)
     template_body = pathlib.Path(filename).read_text()
     act = False
 
@@ -296,13 +296,15 @@ def do_cloudformation(filename, verb, data):
 
     # ...If we're still here our stack is up, grab all the cloudformation
     # outputs and add them to the databag
-    if verb == constants.DOWN_VERB:
-        intermediate_data = {}
-    else:
-        intermediate_data = cloudformation_outputs(stack_name, prefixed_stack_name, data)
+    if verb != constants.DOWN_VERB:
+        cloudformation_outputs(client, stack_name, prefixed_stack_name, data)
 
-    data.update(intermediate_data)
 
+def sanity_check(data):
+    if not data.get("aws_region"):
+        raise RuntimeError("must set aws_region in databag")
+    if not data.get("aws_account_id"):
+        raise RuntimeError("must set aws_account_id in databag")
 
 def check_requirements():
     eksctl_version = subprocess.check_output(['eksctl', 'version'])
