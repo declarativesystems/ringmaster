@@ -129,8 +129,28 @@ aws_region: "us-east-1" # eg
 #### solarwinds_papertrail.yaml
 * single purpose file to configure solarwinds papertrail at cluster level
 * ringmaster will perform the entire installation
+* `kustomization` files will be saved to in a directory `download` within the 
+  current step 
 
 #### kustomization.yaml
 * processed with `kubectl (apply|delete) -k`
 * not changed by ringmaster in any way
 * be sure to also download any required files
+
+#### *.ringpaster.py
+* Rudimentary plugin system
+* Normal python scripts
+* Top level variable `databag` will be set with the current databag
+* To make new data available to other stages, just add it to `databag`
+* Execution:
+    1. set `databag`
+    2. call `main()` 
+
+#### get_eks_cluster_info
+* Empty file
+* Tells ringmaster to lookup eks cluster info and add it to databag:
+    * `cluster_vpc_cidr`
+    * `cluster_private_subnets`
+    * `cluster_private_subnet_{n}`
+    * `cluster_public_subnets`
+    * `cluster_public_subnet_{n}`
