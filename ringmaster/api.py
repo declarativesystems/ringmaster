@@ -16,11 +16,6 @@ import ringmaster.aws as aws
 debug = False
 
 
-def download(url, filename):
-    downloaded = requests.get(url, allow_redirects=True)
-    open(filename, 'wb').write(downloaded.content)
-
-
 def load_databag(databag_file):
     # users write values as JSON to this file and they are added to the
     # databag incrementally
@@ -94,7 +89,8 @@ def do_ringmaster_python(filename, verb, data):
 
 handlers = {
     constants.PATTERN_BASH: do_bash_script,
-    constants.PATTERN_CLOUDFORMATION_FILE: aws.do_cloudformation,
+    constants.PATTERN_LOCAL_CLOUDFORMATION_FILE: aws.do_local_cloudformation,
+    constants.PATTERN_REMOTE_CLOUDFORMATION_FILE: aws.do_remote_cloudformation,
     constants.PATTERN_KUBECTL_FILE: k8s.do_kubectl,
     constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.setup,
     constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,

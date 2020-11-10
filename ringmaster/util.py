@@ -3,6 +3,7 @@ import os
 from . import constants
 from loguru import logger
 import subprocess
+import requests
 import pathlib
 
 def convert_dict_values_to_string(data):
@@ -99,3 +100,7 @@ def substitute_placeholders_in_file(filename, data):
 
     return processed_file
 
+
+def download(url, filename):
+    downloaded = requests.get(url, allow_redirects=True)
+    open(filename, 'wb').write(downloaded.content)

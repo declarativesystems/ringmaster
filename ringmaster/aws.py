@@ -11,7 +11,8 @@ from ringmaster import constants as constants
 from cfn_tools import load_yaml, dump_yaml
 import botocore.exceptions
 from halo import Halo
-import shutil
+import urllib
+import yaml
 from ringmaster.util import flatten_nested_dict
 
 RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
@@ -94,9 +95,10 @@ def do_eks_cluster_info(filename, verb, data):
         )
 
 
-def filename_to_stack_name(cloudformation_file, data):
+def filename_to_stack_name(cloudformation_file):
     return os.path.basename(cloudformation_file)\
-        .replace(constants.PATTERN_CLOUDFORMATION_FILE, "")
+        .replace(constants.PATTERN_LOCAL_CLOUDFORMATION_FILE, "")\
+        .replace(".yaml", "")
 
 
 def load_eksctl_databag(data):
@@ -122,19 +124,20 @@ def cloudformation_param(key, value):
     }
 
 
-def stack_params(cloudformation_file, data):
+def stack_params(filename, data):
     # we can only insert stack parameters that are defined in YAML or cfn
     # will barf, so grab the parameter names from the CFN file and then
     # grab the corresponding parameters from the databag. If anything is
     # missing bomb out now before CFN does.
     # parse with cfn_flip as pyyaml cant handle things like `!Ref`
     # https://stackoverflow.com/a/55349491/3441106
-    cloudformation = load_yaml(pathlib.Path(cloudformation_file).read_text())
+    logger.debug(f"reading cloudformation parameters from {filename}")
+    parsed = load_yaml(pathlib.Path(filename).read_text())
 
     params = []
 
-    if "Parameters" in cloudformation:
-        for cfn_param in cloudformation["Parameters"]:
+    if "Parameters" in parsed:
+        for cfn_param in parsed["Parameters"]:
             logger.debug(f"processing parameter: {cfn_param}")
 
             # cloudformation parameters are usually camel case but databag
@@ -147,21 +150,26 @@ def stack_params(cloudformation_file, data):
             if matched:
                 for match in matched.groups():
                     snakecase_param = snakecase_param.replace(match, f"_{match}")
+            logger.debug(f"snakecase name: {snakecase_param}")
 
             if data.get(cfn_param):
-                params.append(cloudformation_param(cfn_param, data.get(cfn_param)))
+                value = data.get(cfn_param)
+                logger.debug(f"{cfn_param} set to {value}")
+                params.append(cloudformation_param(cfn_param, value))
             elif data.get(snakecase_param):
-                params.append(cloudformation_param(cfn_param, data.get(snakecase_param)))
-            elif "Default" in cloudformation["Parameters"][cfn_param]:
+                value = data.get(snakecase_param)
+                logger.debug(f"{cfn_param} set to {value}")
+                params.append(cloudformation_param(cfn_param, value))
+            elif "Default" in parsed["Parameters"][cfn_param]:
                 # cloudformation allows the empty string as a default
                 logger.debug(f"Using cloudformation default for {cfn_param}")
             else:
                 raise RuntimeError(
-                    f"Cloudformation file:{cloudformation_file} missing param:{cfn_param} "
+                    f"Cloudformation file:{filename} missing param:{cfn_param} "
                         f"expected databag:{snakecase_param}"
                 )
     else:
-        logger.debug(f"no Parameters section in {cloudformation_file}")
+        logger.debug(f"no Parameters section in {filename}")
 
     return params
 
@@ -212,16 +220,57 @@ def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
     data.update(intermediate_databag)
 
 
-def do_cloudformation(filename, verb, data):
-    sanity_check(data)
-    logger.info(f"cloudformation {filename}")
+# Cloudformation has a hard 51200 byte max file size. To work around this
+# files must be hosted on S3. This is an issue with the AWS best
+# practice/quickstart files...
+def do_remote_cloudformation(filename, verb, data):
+    # local file contains a link to the S3 hosted cloudformation
+    with open(filename) as f:
+        config = yaml.safe_load(f)
 
-    stack_name = filename_to_stack_name(filename, data)
+    remote = config["remote"]
+    local_file = os.path.join(os.path.dirname(filename), config["local_file"])
+
+    # download the remote file so that:
+    #   a) we can look at it
+    #   b) we have a record of what was deployed
+    #   c) we can grab the parameter list
+    # download a fresh copy every time since cloudformation will...
+    logger.debug(f"download {remote} to {local_file}")
+    util.download(remote, local_file)
+    stack_name = filename_to_stack_name(local_file)
+    cloudformation(stack_name, local_file, verb, data, template_url=remote)
+
+
+def do_local_cloudformation(filename, verb, data):
+    logger.info(f"cloudformation {filename}")
+    template_body = pathlib.Path(filename).read_text()
+    stack_name = filename_to_stack_name(filename)
+
+    cloudformation(stack_name, filename, verb, data, template_body=template_body)
+
+
+def cloudformation(stack_name, filename, verb, data, template_body=None, template_url=None):
+    sanity_check(data)
+
     prefixed_stack_name = f"{data['name']}-{stack_name}"
     params = stack_params(filename, data)
     client = boto3.client('cloudformation', region_name=data["aws_region"])
     exists = stack_exists(client, prefixed_stack_name)
-    template_body = pathlib.Path(filename).read_text()
+
+    if template_body:
+        template_source = {
+            "TemplateBody": template_body,
+        }
+    elif template_url:
+        template_source = {
+            "TemplateURL": template_url
+        }
+    else:
+        raise RuntimeError(
+            "cloudformation - missing both TemplateBody and TemplateURL"
+        )
+
     act = False
 
     if exists and verb == constants.UP_VERB:
@@ -229,9 +278,9 @@ def do_cloudformation(filename, verb, data):
         def ensure_fn():
             return client.update_stack(
                 StackName=prefixed_stack_name,
-                TemplateBody=template_body,
                 Parameters=params,
                 Capabilities=['CAPABILITY_NAMED_IAM'],
+                **template_source
             )
 
         waiter_name = "stack_update_complete"
@@ -249,9 +298,9 @@ def do_cloudformation(filename, verb, data):
         def ensure_fn():
             return client.create_stack(
                 StackName=prefixed_stack_name,
-                TemplateBody=template_body,
                 Parameters=params,
                 Capabilities=['CAPABILITY_NAMED_IAM'],
+                **template_source
             )
         waiter_name = "stack_create_complete"
         act = True
@@ -263,12 +312,12 @@ def do_cloudformation(filename, verb, data):
 
     if act:
         logger.debug(
-            f"cloudformation stack:{prefixed_stack_name} file: {filename}"
+            f"cloudformation stack:{prefixed_stack_name} file: {stack_name}"
         )
 
         # do the deed...
         try:
-            with Halo(text=f"Cloudformation {filename}", spinner='dots'):
+            with Halo(text=f"Cloudformation {stack_name}", spinner='dots'):
                 response = ensure_fn()
                 logger.debug(f"response: {response}")
 
