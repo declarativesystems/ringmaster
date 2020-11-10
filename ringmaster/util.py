@@ -85,13 +85,13 @@ def substitute_placeholders_line(line, data):
     return line
 
 
-def substitute_placeholders_in_file(filename, data):
+def substitute_placeholders_in_file(filename, comment_delim, data):
     """replace all variables placeholders in filename, return path to substituted file"""
     filename_no_extension, file_extension = os.path.splitext(filename)
     processed_file = filename_no_extension + ".processed" + file_extension
     if os.path.exists(filename):
         with open(processed_file, "w") as out_file:
-            out_file.write(f"# This file was automatically generated from file: {filename}, do not edit!\n")
+            out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
             with open(filename, "r") as in_file:
                 for line in in_file:
                     out_file.write(substitute_placeholders_line(line, data))

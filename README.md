@@ -120,6 +120,13 @@ aws_region: "us-east-1" # eg
 * parameters are converted to snake_case and looked up from databag
 * outputs are converted to snake_case and added to databag
 
+#### *.remote_cloudformation.yaml
+* Remotely hosted cloudformation scripts to get around 51200 byte upload
+  hard limit
+* Handled the same as local cloudformation scripts
+* A copy of the remote file will be downloaded for your own records and
+  for parameter pre-processing
+
 #### *.kubectl.yaml
 * databag variables are available and can be inserted as ${variable_name}
 * ringmaster pre-process the file to substitute variables and saves the
@@ -154,3 +161,12 @@ aws_region: "us-east-1" # eg
     * `cluster_private_subnet_{n}`
     * `cluster_public_subnets`
     * `cluster_public_subnet_{n}`
+
+# *.snowflake.sql
+* Bunch of SQL commands to run against snowflake
+* Configure snowflake credentials at `~/.ringmaster/snowflake.yaml`
+* Placeholders will be substituted and the result saved to 
+  `file.snowflake.processed.sql`
+* Each line **must** end with `;`
+* Lines starting `--` will be discarded
+* One statement per line, but long statements can be split over multiple lines

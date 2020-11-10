@@ -16,6 +16,7 @@ cfn-flip = "*"
 botocore = "*"
 halo = "*"
 pyyaml = "*"
+snowflake-connector-python = "*"
 
 [requires]
 python_version = "3.6"

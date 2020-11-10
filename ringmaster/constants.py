@@ -18,6 +18,7 @@ PATTERN_SOLARWINDS_PAPERTRAIL_FILE = "solarwinds_papertrail.yaml"
 PATTERN_KUSTOMIZATION_FILE = "kustomization.yaml"
 PATTERN_RINGMASTER_PYTHON_FILE = ".ringmaster.py"
 PATTERN_EKS_CLUSTER_INFO = "get_eks_cluster_info"
+PATTERN_SNOWFLAKE_SQL = ".snowflake.sql"
 
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"
@@ -27,3 +28,5 @@ KEY_EKSCTL_DATABAG="eksctl_databag_file"
 
 AWS_TEMPLATE_DIR = "res/aws"
 AWS_USER_TEMPLATE_DIR = "~/.ringmaster/res/aws"
+
+COMMENT_SQL = "--"

@@ -12,6 +12,7 @@ import ringmaster.solarwinds_papertrail as solarwinds_papertrail
 from .util import run_cmd
 import ringmaster.k8s as k8s
 import ringmaster.aws as aws
+import ringmaster.snowflake as snowflake
 
 debug = False
 
@@ -95,7 +96,8 @@ handlers = {
     constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.setup,
     constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,
     constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
-    constants.PATTERN_EKS_CLUSTER_INFO: aws.do_eks_cluster_info
+    constants.PATTERN_EKS_CLUSTER_INFO: aws.do_eks_cluster_info,
+    constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
 }
 
 

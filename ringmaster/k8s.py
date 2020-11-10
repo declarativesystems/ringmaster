@@ -89,7 +89,7 @@ def register_k8s_secret(secret_namespace, secret_name, data):
 def do_kubectl(filename, verb, data):
     # substitute ${...} variables from databag, bomb out if any missing
     logger.info(f"kubectl: {filename}")
-    processed_file = substitute_placeholders_in_file(filename, data)
+    processed_file = substitute_placeholders_in_file(filename, "#", data)
     logger.debug(f"kubectl processed file: {processed_file}")
 
     if verb == constants.UP_VERB:
