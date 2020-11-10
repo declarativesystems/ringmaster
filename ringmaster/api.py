@@ -98,6 +98,7 @@ handlers = {
     constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
     constants.PATTERN_EKS_CLUSTER_INFO: aws.do_eks_cluster_info,
     constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
+    constants.PATTERN_SNOWFLAKE_QUERY: snowflake.do_snowflake_query,
 }
 
 

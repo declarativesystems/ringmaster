@@ -170,3 +170,13 @@ aws_region: "us-east-1" # eg
 * Each line **must** end with `;`
 * Lines starting `--` will be discarded
 * One statement per line, but long statements can be split over multiple lines
+
+# *.snowflake_query.sql
+* ONE sql command to run which must be a `SELECT` statement
+* Configure snowflake credentials at `~/.ringmaster/snowflake.yaml`
+* Placeholders will be substituted and the result saved to 
+  `file.snowflake_query.processed.sql`
+* Entire processed file will be executed as-is
+* Columns in the results will be added to databag using the column name. Use 
+  SQL `AS` to set databag name, eg:
+  `SELECT  x AS the_name_for_databag`
