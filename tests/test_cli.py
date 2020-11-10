@@ -2,17 +2,11 @@ import subprocess
 import pytest
 
 def test_version():
-    subprocess.check_output(
+    capture = subprocess.check_output(
         "ringmaster --version",
         shell=True
     )
-
-def test_debug():
-    capture = subprocess.check_output(
-        "ringmaster --version --debug",
-        shell=True
-    )
-    assert b"debug mode" in capture
+    assert b"0.0.0" in capture
 
 
 def test_bad_command():

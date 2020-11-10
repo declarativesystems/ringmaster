@@ -4,7 +4,7 @@ from . import constants
 from loguru import logger
 import subprocess
 import requests
-import pathlib
+import snakecase
 
 def convert_dict_values_to_string(data):
     # all values passed to os.environ must be strings, avoid unwanted yaml help
@@ -104,3 +104,22 @@ def substitute_placeholders_in_file(filename, data):
 def download(url, filename):
     downloaded = requests.get(url, allow_redirects=True)
     open(filename, 'wb').write(downloaded.content)
+
+
+# convert `number` to `_number` to match databag
+def string_to_snakecase(string):
+    # there are two conversion patterns in use which convert as follows:
+    #   1. lowercase-hypen-separated -> lowercase_hyphen_separated
+    #   2. mixed-CasePascalCaseAndHyphenSeparated -> mixed_case_pascal_case_and_hyphen_separated
+    # AWS public cloudformation scripts use option 2 ;-)
+    if string.lower() == string:
+        # lower case
+        string = string.replace("-", "_")
+    else:
+        # mixed case
+        string = string.replace("-", "")
+
+    key = snakecase.convert(string)
+
+    logger.debug(f"converted input:{string} key:{key}")
+    return key

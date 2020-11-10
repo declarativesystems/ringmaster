@@ -80,10 +80,10 @@ def do_eks_cluster_info(filename, verb, data):
 
         # flattened subnet ids for cloudformation/bash
         for i, value in enumerate(private_subnet_ids):
-            data[f"cluster_private_subnet_{i}"] = value
+            data[f"cluster_private_subnet{i}"] = value
 
         for i, value in enumerate(public_subnet_ids):
-            data[f"cluster_public_subnet_{i}"] = value
+            data[f"cluster_public_subnet{i}"] = value
 
     except KeyError as e:
         raise RuntimeError(
@@ -140,18 +140,7 @@ def stack_params(filename, data):
         for cfn_param in parsed["Parameters"]:
             logger.debug(f"processing parameter: {cfn_param}")
 
-            # cloudformation parameters are usually camel case but databag
-            # parameters are usually snake case - use an exact match followed
-            # by snake case
-            snakecase_param = snakecase.convert(cfn_param)
-
-            # convert `number` to `_number` to match databag
-            matched = re.match(r"[^\d]*(\d+)[^\d]*", snakecase_param)
-            if matched:
-                for match in matched.groups():
-                    snakecase_param = snakecase_param.replace(match, f"_{match}")
-            logger.debug(f"snakecase name: {snakecase_param}")
-
+            snakecase_param = util.string_to_snakecase(cfn_param)
             if data.get(cfn_param):
                 value = data.get(cfn_param)
                 logger.debug(f"{cfn_param} set to {value}")
@@ -166,7 +155,7 @@ def stack_params(filename, data):
             else:
                 raise RuntimeError(
                     f"Cloudformation file:{filename} missing param:{cfn_param} "
-                        f"expected databag:{snakecase_param}"
+                        f"expected databag:{snakecase_param}, avaiable:{data.keys()}"
                 )
     else:
         logger.debug(f"no Parameters section in {filename}")
@@ -210,8 +199,8 @@ def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
             # adjust the name each time and avoids tricks like eval in bash.
             # the downside of this is you need to know what stack generated the
             # output name
-            key_name = output["ExportName"].replace(f"{prefixed_stack_name}-", f"{stack_name}-")\
-                .lower().replace("-", "_")
+            key_name = output["ExportName"].replace(f"{prefixed_stack_name}-", f"{stack_name}-")
+            key_name = util.string_to_snakecase(key_name)
 
             string_value = str(output["OutputValue"])
             intermediate_databag[key_name] = string_value
