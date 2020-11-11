@@ -59,6 +59,21 @@ def base64encode(string):
     return base64_bytes.decode('ascii')
 
 
+def run_kubectl(verb, flag, path, data):
+    if verb == constants.UP_VERB:
+        kubectl_cmd = "apply"
+    elif verb == constants.DOWN_VERB:
+        kubectl_cmd = "delete"
+    else:
+        raise ValueError(f"invalid verb: {verb}")
+
+    cmd = ["kubectl", kubectl_cmd, flag, path]
+    if "debug" in data:
+        cmd.append("-v=8")
+
+    run_cmd(cmd, data)
+
+
 def register_k8s_secret(secret_namespace, secret_name, data):
     logger.debug(f"registering k8s secret:{secret_name}")
     secret_data = {
@@ -81,8 +96,8 @@ def register_k8s_secret(secret_namespace, secret_name, data):
         yaml.dump(secret_data, outfile)
 
     logger.debug("creating secret with kubectl")
-    run_cmd(["kubectl", "apply", "-f", secret_file])
 
+    run_kubectl(constants.UP_VERB, "-f", secret_file, data)
     os.unlink(secret_file)
 
 
@@ -92,19 +107,11 @@ def do_kubectl(filename, verb, data):
     processed_file = substitute_placeholders_in_file(filename, "#", data)
     logger.debug(f"kubectl processed file: {processed_file}")
 
-    if verb == constants.UP_VERB:
-        kubectl_cmd = "apply"
-    elif verb == constants.DOWN_VERB:
-        kubectl_cmd = "delete"
-    else:
-        raise ValueError(f"invalid verb: {verb}")
-
-    run_cmd(["kubectl", kubectl_cmd,  "-f", processed_file], data)
+    run_kubectl(verb, "-f", processed_file, data)
 
 
 def do_kustomizer(filename, verb, data=None):
     logger.info(f"kustomizer: {filename}")
-    kubectl_cmd = "apply" if verb == constants.UP_VERB else "delete"
     sources_dir = os.path.dirname(filename)
 
-    run_cmd(["kubectl", kubectl_cmd, "-k", sources_dir])
+    run_kubectl(verb, "-k", data, sources_dir)

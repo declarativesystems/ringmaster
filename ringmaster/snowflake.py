@@ -8,13 +8,17 @@ import ringmaster.constants as constants
 SNOWFLAKE_CONFIG_FILE = "~/.ringmaster/snowflake.yaml"
 
 
-def get_cursor():
+def get_cursor(data):
     snowflake_config_file = os.path.expanduser(SNOWFLAKE_CONFIG_FILE)
     if os.path.exists(snowflake_config_file):
         with open(snowflake_config_file) as f:
             config = yaml.safe_load(f)
-        ctx = snowflake.connector.connect(**config)
+        ctx = snowflake.connector.connect(**config["credentials"])
         cs = ctx.cursor(snowflake.connector.DictCursor)
+
+        # grab some convenince variables from snowflake settings
+        data["snowflake_account"] = config["credentials"]["account"]
+        data["snowflake_region"] = config["region"]
     else:
         raise RuntimeError(f"snowflake settings not found at: {snowflake_config_file}")
 
@@ -35,7 +39,7 @@ def process_file_and_connect(filename, data):
     logger.debug(f"snowflake processed file: {processed_file}")
 
     # connect to snowflake, bail if it fails
-    cs = get_cursor()
+    cs = get_cursor(data)
     return cs, processed_file
 
 
