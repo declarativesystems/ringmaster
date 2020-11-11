@@ -70,8 +70,8 @@ def run_kubectl(verb, flag, path, data):
     cmd = ["kubectl", kubectl_cmd, flag, path]
     if "debug" in data:
         cmd.append("-v=8")
-
     run_cmd(cmd, data)
+
 
 
 def register_k8s_secret(secret_namespace, secret_name, data):

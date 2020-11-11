@@ -6,19 +6,6 @@ import subprocess
 import requests
 import snakecase
 
-def convert_dict_values_to_string(data):
-    # all values passed to os.environ must be strings, avoid unwanted yaml help
-    for key in data:
-        data[key] = str(data[key])
-
-
-def merge_env(data):
-    env = os.environ.copy()
-    env.update(data)
-
-    convert_dict_values_to_string(env)
-    return env
-
 
 def walk(data, parent_name=None):
     seq_iter = data if isinstance(data, dict) else range(len(data))
@@ -36,6 +23,20 @@ def walk(data, parent_name=None):
                 yield k, v
         else:
             yield me, data[i]
+
+
+def convert_dict_values_to_string(data):
+    # all values passed to os.environ must be strings, avoid unwanted yaml help
+    for key in data:
+        data[key] = str(data[key])
+
+
+def merge_env(data):
+    env = os.environ.copy()
+    env.update(data)
+
+    convert_dict_values_to_string(env)
+    return env
 
 
 def run_cmd(cmd, data=None):
