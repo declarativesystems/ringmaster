@@ -79,3 +79,4 @@ def do_snowflake_query(filename, verb, data):
         extra_data[k.lower()] = v
 
     logger.debug(f"query result - items: {len(extra_data)} values:{extra_data}")
+    data.update(extra_data)
