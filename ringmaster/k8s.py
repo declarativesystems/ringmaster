@@ -68,8 +68,8 @@ def run_kubectl(verb, flag, path, data):
         raise ValueError(f"invalid verb: {verb}")
 
     cmd = ["kubectl", kubectl_cmd, flag, path]
-    if "debug" in data:
-        cmd.append("-v=8")
+    if data.get("debug"):
+        cmd.append("-v=2")
     run_cmd(cmd, data)
 
 
