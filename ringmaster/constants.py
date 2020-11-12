@@ -21,6 +21,7 @@ PATTERN_EKS_CLUSTER_INFO = "get_eks_cluster_info"
 PATTERN_SNOWFLAKE_SQL = ".snowflake.sql"
 PATTERN_SNOWFLAKE_QUERY = ".snowflake_query.sql"
 PATTERN_HELM_DEPLOY = "helm_deploy.yaml"
+PATTERN_AWS_IAM_POLICY = ".iam_policy.json"
 
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"

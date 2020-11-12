@@ -22,6 +22,8 @@ RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
 ERROR_UP_TO_DATE = r"No updates are to be performed"
 ERROR_AWS = r"encountered a terminal failure state"
 ERROR_MISSING = r"does not exist"
+ERROR_NO_SUCH_ENTITY = r"NoSuchEntity"
+
 
 def aws_init():
     # copy files in res/aws to project dir
@@ -337,6 +339,49 @@ def cloudformation(stack_name, filename, verb, data, template_body=None, templat
     # outputs and add them to the databag
     if verb != constants.DOWN_VERB:
         cloudformation_outputs(client, stack_name, prefixed_stack_name, data)
+
+
+def do_iam(filename, verb, data):
+    logger.info(f"AWS IAM: {filename}")
+
+    basename = os.path.basename(filename)
+    policy_name = basename[:-len(constants.PATTERN_AWS_IAM_POLICY)]
+    policy_arn = f"arn:aws:iam::{data['aws_account_id']}:policy/{policy_name}"
+    client = boto3.client('iam', region_name=data["aws_region"])
+
+    try:
+        policy_exists = client.get_policy(PolicyArn=policy_arn)
+    except botocore.exceptions.ClientError as e:
+        logger.debug(f"AWS IAM - exception: {e}")
+        if re.search(ERROR_NO_SUCH_ENTITY, str(e), re.IGNORECASE):
+            policy_exists = False
+        else:
+            raise e
+
+    if verb == constants.UP_VERB and policy_exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    elif verb == constants.UP_VERB and not policy_exists:
+        logger.debug(f"creating IAM policy:{policy_name} file:{filename}")
+        with open(filename, 'r') as f:
+            file_content = f.read()
+        response = client.create_policy(
+            PolicyName=policy_name,
+            PolicyDocument=file_content,
+        )
+        logger.debug(f"...result: {response}")
+        databag_key = ("aws_iam_" + policy_name).lower()
+        extra_data = {databag_key: policy_arn}
+        data.update(extra_data)
+    elif verb == constants.DOWN_VERB and policy_exists:
+        logger.debug(f"deleting IAM policy:{policy_name}")
+        response = client.delete_policy(
+            PolicyArn=policy_arn
+        )
+        logger.debug(f"...result: {response}")
+    elif verb == constants.DOWN_VERB and not policy_exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    else:
+        raise RuntimeError(f"AWS IAM - invalid verb {verb}")
 
 
 def sanity_check(data):
