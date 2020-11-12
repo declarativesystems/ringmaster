@@ -162,7 +162,7 @@ aws_region: "us-east-1" # eg
     * `cluster_public_subnets`
     * `cluster_public_subnet_{n}`
 
-# *.snowflake.sql
+#### *.snowflake.sql
 * Bunch of SQL commands to run against snowflake
 * Configure snowflake credentials at `~/.ringmaster/snowflake.yaml`
 * Placeholders will be substituted and the result saved to 
@@ -180,3 +180,8 @@ aws_region: "us-east-1" # eg
 * Columns in the results will be added to databag using the column name. Use 
   SQL `AS` to set databag name, eg:
   `SELECT  x AS the_name_for_databag`
+
+#### helm_deploy.yaml
+* Requires internet access - for repeatable deployments artifactory integration
+  or similar required
+* Install helm repo and deploy directly

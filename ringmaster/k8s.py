@@ -8,7 +8,7 @@ import json
 from .util import run_cmd
 from pathlib import Path
 from ringmaster import constants
-from .util import substitute_placeholders_in_file
+import ringmaster.util as util
 
 
 def copy_kustomization_files(root_dir, target_dir):
@@ -60,6 +60,9 @@ def base64encode(string):
 
 
 def run_kubectl(verb, flag, path, data):
+    if data is None:
+        data = {}
+
     if verb == constants.UP_VERB:
         kubectl_cmd = "apply"
     elif verb == constants.DOWN_VERB:
@@ -71,7 +74,6 @@ def run_kubectl(verb, flag, path, data):
     if data.get("debug"):
         cmd.append("-v=2")
     run_cmd(cmd, data)
-
 
 
 def register_k8s_secret(secret_namespace, secret_name, data):
@@ -101,10 +103,10 @@ def register_k8s_secret(secret_namespace, secret_name, data):
     os.unlink(secret_file)
 
 
-def do_kubectl(filename, verb, data):
+def do_kubectl(filename, verb, data=None):
     # substitute ${...} variables from databag, bomb out if any missing
     logger.info(f"kubectl: {filename}")
-    processed_file = substitute_placeholders_in_file(filename, "#", data)
+    processed_file = util.substitute_placeholders_in_file(filename, "#", data)
     logger.debug(f"kubectl processed file: {processed_file}")
 
     run_kubectl(verb, "-f", processed_file, data)
@@ -114,4 +116,52 @@ def do_kustomizer(filename, verb, data=None):
     logger.info(f"kustomizer: {filename}")
     sources_dir = os.path.dirname(filename)
 
-    run_kubectl(verb, "-k", data, sources_dir)
+    run_kubectl(verb, "-k", sources_dir, data)
+
+
+def do_helm(filename, verb, data=None):
+    with open(filename) as f:
+        config = yaml.safe_load(f)
+
+    if verb == constants.UP_VERB:
+        helm_command = "install"
+    elif verb == constants.DOWN_VERB:
+        helm_command = "uninstall"
+    else:
+        raise RuntimeError(f"helm - invalid verb: {verb}")
+
+    base_cmd = ["helm"]
+    if data.get("debug"):
+        base_cmd.append("--debug")
+
+    try:
+        # helm repos...
+        if verb == constants.UP_VERB:
+            repos_list = util.run_cmd_json(["helm", "repo", "list", "--output", "json"])
+            logger.debug(f"helm repos installed: {repos_list}")
+            repos_installed = list(map(lambda x: x["name"], repos_list))
+            logger.debug(f"helm repos installed: {repos_installed}")
+
+            repos = config.get("repos", {})
+            if repos:
+                for repo_key, source in config.get("repos", {}).items():
+                    logger.debug(f"helm - request install repo: {repo_key}")
+                    if repo_key not in repos_installed:
+                        logger.info(f"helm - installing {repo_key}")
+                        cmd = base_cmd + ["repo", "add", repo_key, source]
+                        util.run_cmd(cmd)
+            else:
+                logger.warning(f"helm - no helm repos specified in {filename}")
+        # helm deployments
+        helm_list = util.run_cmd_json(["helm", "list", "--output", "json"])
+        helm_deployments = list(map(lambda x: x["name"], helm_list))
+        logger.debug(f"helm deployments installed: {helm_deployments}")
+        if config["name"] in helm_deployments:
+            logger.info(f"helm - already installed:{config['name']}")
+        else:
+            logger.info(f"helm - installing:{config['name']}")
+            cmd = base_cmd + ["helm", helm_command, config["name"], config["install"]]
+            util.run_cmd(cmd)
+
+    except KeyError as e:
+        raise RuntimeError(f"helm - {filename} missing key: {e}")

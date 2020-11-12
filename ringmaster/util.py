@@ -5,6 +5,7 @@ from loguru import logger
 import subprocess
 import requests
 import snakecase
+import json
 
 
 def walk(data, parent_name=None):
@@ -39,9 +40,15 @@ def merge_env(data):
     return env
 
 
+def run_cmd_json(cmd, data=None):
+    """Run a command and parse JSON from its output"""
+    return json.loads(run_cmd(cmd, data=data))
+
+
 def run_cmd(cmd, data=None):
     if not data:
         data = {}
+    output = ""
     env = merge_env(data)
     logger.trace(f"merged environment: {env}")
     logger.debug(f"running command: {cmd}")
@@ -52,15 +59,19 @@ def run_cmd(cmd, data=None):
                           shell=isinstance(cmd, str),
                           env=env) as proc:
         while True:
-            output = proc.stdout.readline()
+            line = proc.stdout.readline()
             if proc.poll() is not None:
                 break
-            if output:
-                logger.log("OUTPUT", output.decode("UTF-8").strip())
+            if line:
+                line_decoded = line.decode("UTF-8")
+                logger.log("OUTPUT", line_decoded.strip())
+                output += line_decoded
+
         rc = proc.poll()
         logger.debug(f"result: {rc}")
         if rc != 0:
             raise RuntimeError(f"Command failed with non-zero exit status:{rc} - {cmd}")
+    return output
 
 
 def flatten_nested_dict(data):
