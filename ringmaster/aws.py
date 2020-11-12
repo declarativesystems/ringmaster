@@ -369,9 +369,6 @@ def do_iam(filename, verb, data):
             PolicyDocument=file_content,
         )
         logger.debug(f"...result: {response}")
-        databag_key = ("aws_iam_" + policy_name).lower()
-        extra_data = {databag_key: policy_arn}
-        data.update(extra_data)
     elif verb == constants.DOWN_VERB and policy_exists:
         logger.debug(f"deleting IAM policy:{policy_name}")
         response = client.delete_policy(
@@ -383,6 +380,11 @@ def do_iam(filename, verb, data):
     else:
         raise RuntimeError(f"AWS IAM - invalid verb {verb}")
 
+    if verb == constants.UP_VERB:
+        databag_key = ("aws_iam_" + snakecase.convert(policy_name))
+        extra_data = {databag_key: policy_arn}
+        logger.debug(f"added to databag:{databag_key}")
+        data.update(extra_data)
 
 def sanity_check(data):
     if not data.get("aws_region"):
