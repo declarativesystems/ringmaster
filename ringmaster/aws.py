@@ -42,16 +42,27 @@ def aws_init():
     # TIL: https://askubuntu.com/a/86891/594199
     util.run_cmd(["cp", "-a", f"{source_dir}/.", "."])
 
-# databag:
-#   + cluster_vpc_cidr
-#   + cluster_private_subnets
-#   + cluster_private_subnet_{n}
-#   + cluster_public_subnets
-#   + cluster_public_subnet_{n}
-def do_eks_cluster_info(filename, verb, data):
+
+def eks_cluster_info(aws_region, cluster_name, data):
     sanity_check(data)
-    logger.info(f"eks cluster info: {filename}")
-    ec2 = boto3.client('ec2', region_name=data["aws_region"])
+
+    # eksctl cluster info --> databag
+    logger.debug("eks cluster info")
+    eksctl_data = util.run_cmd_json(
+        ["eksctl", "get", "cluster", "--region", aws_region, cluster_name, "--output", "json"],
+        data
+    )
+
+    flattened_eksctl_data = flatten_nested_dict(eksctl_data)
+    logger.debug(f"loaded items:{len(flattened_eksctl_data)} data:{flattened_eksctl_data}")
+    data.update(flattened_eksctl_data)
+
+    #   + cluster_vpc_cidr
+    #   + cluster_private_subnets
+    #   + cluster_private_subnet_{n}
+    #   + cluster_public_subnets
+    #   + cluster_public_subnet_{n}
+    ec2 = boto3.client('ec2', region_name=aws_region)
     try:
 
         # VPC CIDR block
@@ -102,21 +113,6 @@ def filename_to_stack_name(cloudformation_file):
         .replace(constants.PATTERN_LOCAL_CLOUDFORMATION_FILE, "")\
         .replace(".yaml", "")
 
-
-def load_eksctl_databag(data):
-    eksctl_databag_file = data[constants.KEY_EKSCTL_DATABAG]
-    if os.path.getsize(eksctl_databag_file):
-        logger.debug(f"loading eksctl cluster info from from {eksctl_databag_file}")
-        with open(eksctl_databag_file) as json_file:
-            # strip outer array
-            extra_data = json.load(json_file)[0]
-
-        flattened_extra_data = flatten_nested_dict(extra_data)
-        logger.debug(f"loaded items:{len(flattened_extra_data)} data:{flattened_extra_data}")
-        data.update(flattened_extra_data)
-
-        # empty the bag so we know to ignore it
-        open(eksctl_databag_file, 'w').close()
 
 
 def cloudformation_param(key, value):
@@ -523,3 +519,39 @@ def check_requirements():
     logger.info(f"aws: ${aws_version}")
     logger.info(f"helm: ${helm_version}")
     logger.info(f"helm: ${kubectl_version}")
+
+
+def do_eksctl(filename, verb, data):
+    logger.info(f"eksctl: ${filename}")
+    processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
+    with open(processed_filename) as f:
+        config = yaml.safe_load(f)
+
+    # eksctl needs region and cluster name - grab these well-known fields from
+    # processed yaml file to avoid needing well-known keys in databag
+    try:
+        aws_region = config["metadata"]["region"]
+        cluster_name = config["metadata"]["name"]
+    except KeyError as e:
+        raise RuntimeError(f"eksctl file:{filename} missing required value {e}")
+
+    try:
+        util.run_cmd(["eksctl", "get", "cluster", "-n", cluster_name, "--region", aws_region], data)
+        exists = True
+    except Exception as e:
+        logger.error(f"fixme - type this eception: {e}")
+        exists = False
+
+    if verb == constants.UP_VERB and exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    elif verb == constants.UP_VERB and not exists:
+        util.run_cmd(["eksctl", "create", "cluster", "-f", processed_filename], data)
+    elif verb == constants.DOWN_VERB and exists:
+        util.run_cmd(["eksctl", "delete", "cluster", "-f", processed_filename], data)
+    elif verb == constants.DOWN_VERB and not exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    else:
+        raise RuntimeError(f"eksctl - invalid verb: {verb}")
+
+    if verb == constants.UP_VERB:
+        eks_cluster_info(aws_region, cluster_name, data)

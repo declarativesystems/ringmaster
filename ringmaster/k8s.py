@@ -120,6 +120,7 @@ def do_kustomizer(filename, verb, data=None):
 
 
 def do_helm(filename, verb, data=None):
+    logger.info(f"helm: ${filename}")
     processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
     with open(processed_filename) as f:
         config = yaml.safe_load(f)
@@ -172,3 +173,4 @@ def do_helm(filename, verb, data=None):
 
     except KeyError as e:
         raise RuntimeError(f"helm - {filename} missing key: {e}")
+

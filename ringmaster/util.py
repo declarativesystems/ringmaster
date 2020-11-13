@@ -42,7 +42,9 @@ def merge_env(data):
 
 def run_cmd_json(cmd, data=None):
     """Run a command and parse JSON from its output"""
-    return json.loads(run_cmd(cmd, data=data))
+    string = run_cmd(cmd, data=data)
+    logger.debug(f"string to parse: {string}")
+    return json.loads(string)
 
 
 def run_cmd(cmd, data=None):
@@ -60,13 +62,14 @@ def run_cmd(cmd, data=None):
                           env=env) as proc:
         while True:
             line = proc.stdout.readline()
-            if proc.poll() is not None:
-                break
-            if line:
+            while line:
                 line_decoded = line.decode("UTF-8")
                 logger.log("OUTPUT", line_decoded.strip())
                 output += line_decoded
 
+                line = proc.stdout.readline()
+            if proc.poll() is not None:
+                break
         rc = proc.poll()
         logger.debug(f"result: {rc}")
         if rc != 0:

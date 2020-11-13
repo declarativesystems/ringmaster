@@ -21,7 +21,6 @@ def load_databag(databag_file):
     # users write values as JSON to this file and they are added to the
     # databag incrementally
     _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
-    _, eksctl_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster-eksctl")
 
     # general program settings
     data = {
@@ -38,7 +37,6 @@ def load_databag(databag_file):
     # per-run program specific data
     data.update({
         constants.KEY_INTERMEDIATE_DATABAG: intermediate_databag_file,
-        constants.KEY_EKSCTL_DATABAG: eksctl_databag_file,
         "debug": "debug" if debug else "",
         "name": os.path.basename(os.getcwd()),
     })
@@ -68,7 +66,6 @@ def do_bash_script(filename, verb, data):
     run_cmd(f"bash {filename}", data)
 
     load_intermediate_databag(data)
-    aws.load_eksctl_databag(data)
 
 
 # see
@@ -96,13 +93,13 @@ handlers = {
     constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.setup,
     constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,
     constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
-    constants.PATTERN_EKS_CLUSTER_INFO: aws.do_eks_cluster_info,
     constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
     constants.PATTERN_SNOWFLAKE_QUERY: snowflake.do_snowflake_query,
     constants.PATTERN_HELM_DEPLOY: k8s.do_helm,
     constants.PATTERN_AWS_IAM_POLICY: aws.do_iam_policy,
     constants.PATTERN_AWS_IAM_ROLE: aws.do_iam_role,
     constants.PATTERN_SECRETS_MANAGER: aws.do_secrets_manager,
+    constants.PATTERN_EKSCTL_CONFIG: aws.do_eksctl,
 }
 
 
