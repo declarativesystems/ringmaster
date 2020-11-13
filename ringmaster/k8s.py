@@ -120,7 +120,8 @@ def do_kustomizer(filename, verb, data=None):
 
 
 def do_helm(filename, verb, data=None):
-    with open(filename) as f:
+    processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
+    with open(processed_filename) as f:
         config = yaml.safe_load(f)
 
     if verb == constants.UP_VERB:
@@ -137,7 +138,7 @@ def do_helm(filename, verb, data=None):
     try:
         # helm repos...
         if verb == constants.UP_VERB:
-            repos_list = util.run_cmd_json(["helm", "repo", "list", "--output", "json"])
+            repos_list = util.run_cmd_json(base_cmd + ["repo", "list", "--output", "json"])
             logger.debug(f"helm repos installed: {repos_list}")
             repos_installed = list(map(lambda x: x["name"], repos_list))
             logger.debug(f"helm repos installed: {repos_installed}")
@@ -153,14 +154,20 @@ def do_helm(filename, verb, data=None):
             else:
                 logger.warning(f"helm - no helm repos specified in {filename}")
         # helm deployments
-        helm_list = util.run_cmd_json(["helm", "list", "--output", "json"])
+        helm_list = util.run_cmd_json(base_cmd + ["list", "--output", "json"])
         helm_deployments = list(map(lambda x: x["name"], helm_list))
         logger.debug(f"helm deployments installed: {helm_deployments}")
         if config["name"] in helm_deployments:
             logger.info(f"helm - already installed:{config['name']}")
         else:
             logger.info(f"helm - installing:{config['name']}")
-            cmd = base_cmd + ["helm", helm_command, config["name"], config["install"]]
+            cmd = base_cmd + [helm_command, config["name"], config["install"]]
+            for setting in config.get("set", []):
+                cmd.append("--set")
+                cmd.append(setting)
+
+            cmd += config.get("options", [])
+
             util.run_cmd(cmd)
 
     except KeyError as e:
