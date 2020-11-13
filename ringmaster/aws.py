@@ -386,11 +386,85 @@ def do_iam(filename, verb, data):
         logger.debug(f"added to databag:{databag_key}")
         data.update(extra_data)
 
+
 def sanity_check(data):
     if not data.get("aws_region"):
         raise RuntimeError("must set aws_region in databag")
     if not data.get("aws_account_id"):
         raise RuntimeError("must set aws_account_id in databag")
+
+
+def secret_exists(client, secret_id):
+    try:
+        response = client.describe_secret(
+            SecretId=secret_id
+        )
+        exists = True
+        deleted = True if response.get("DeletedDate") else False
+    except botocore.exceptions.ClientError as e:
+        logger.error(f"--> {e}")
+        exists = False
+        deleted = False
+    logger.debug(f"secret_id:{secret_id} exists:{exists}")
+    return exists, deleted
+
+
+def update_secret(client, secret_id, secret_value, deleted):
+    if deleted:
+        logger.debug(f"Restoring deleted secret: {secret_id}")
+        response = client.restore_secret(
+            SecretId=secret_id
+        )
+
+    response = client.update_secret(
+        SecretId=secret_id,
+        SecretString=secret_value
+    )
+    logger.info(f"created secret id:{secret_id} ARN:{response}")
+
+
+def create_secret(client, secret_id, secret_value):
+    response = client.create_secret(
+        Name=secret_id,
+        SecretString=secret_value
+    )
+    logger.info(f"created secret id:{secret_id} ARN:{response}")
+
+
+def delete_secret(client, secret_id):
+    exists, deleted = secret_exists(client, secret_id)
+    if exists and not deleted:
+        response = client.delete_secret(
+            SecretId=secret_id
+        )
+        logger.debug(f"secret id:{secret_id} deleted:{response}")
+    else:
+        logger.debug(f"secret id:{secret_id} does not exist, moving on")
+
+
+# `secret_id` - The identifier of the secret whose details you want to
+# retrieve. You can specify either the Amazon Resource Name (ARN) or the
+# friendly name of the secret.
+def do_secrets_manager(filename, verb, data):
+    logger.info(f"secretsmanager: {filename}")
+    processed_file = util.substitute_placeholders_in_file(filename, "#", data)
+    with open(processed_file) as f:
+        config = yaml.safe_load(f)
+
+    client = boto3.client('secretsmanager', region_name=data["aws_region"])
+
+    for secret in config.get("secrets", []):
+        exists, deleted = secret_exists(client, secret["name"])
+        if verb == constants.UP_VERB and exists:
+            update_secret(client, secret["name"], secret["value"], deleted)
+        elif verb == constants.UP_VERB and not exists:
+            create_secret(client, secret["name"], secret["value"])
+        elif verb == constants.DOWN_VERB and exists:
+            delete_secret(client, secret["name"])
+        elif verb == constants.DOWN_VERB and not exists:
+            logger.debug(f"secretsmanager - already deleted:{secret['name']}")
+        else:
+            raise RuntimeError(f"secretsmanager - invalid verb: {verb}")
 
 def check_requirements():
     eksctl_version = subprocess.check_output(['eksctl', 'version'])
