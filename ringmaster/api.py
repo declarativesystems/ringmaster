@@ -100,7 +100,8 @@ handlers = {
     constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
     constants.PATTERN_SNOWFLAKE_QUERY: snowflake.do_snowflake_query,
     constants.PATTERN_HELM_DEPLOY: k8s.do_helm,
-    constants.PATTERN_AWS_IAM_POLICY: aws.do_iam,
+    constants.PATTERN_AWS_IAM_POLICY: aws.do_iam_policy,
+    constants.PATTERN_AWS_IAM_ROLE: aws.do_iam_role,
     constants.PATTERN_SECRETS_MANAGER: aws.do_secrets_manager,
 }
 

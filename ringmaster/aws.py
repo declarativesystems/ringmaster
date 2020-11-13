@@ -341,8 +341,8 @@ def cloudformation(stack_name, filename, verb, data, template_body=None, templat
         cloudformation_outputs(client, stack_name, prefixed_stack_name, data)
 
 
-def do_iam(filename, verb, data):
-    logger.info(f"AWS IAM: {filename}")
+def do_iam_policy(filename, verb, data):
+    logger.info(f"AWS IAM policy: {filename}")
 
     basename = os.path.basename(filename)
     policy_name = basename[:-len(constants.PATTERN_AWS_IAM_POLICY)]
@@ -381,8 +381,54 @@ def do_iam(filename, verb, data):
         raise RuntimeError(f"AWS IAM - invalid verb {verb}")
 
     if verb == constants.UP_VERB:
-        databag_key = ("aws_iam_" + snakecase.convert(policy_name))
+        databag_key = ("aws_iam_policy_" + snakecase.convert(policy_name))
         extra_data = {databag_key: policy_arn}
+        logger.debug(f"added to databag:{databag_key}")
+        data.update(extra_data)
+
+
+def do_iam_role(filename, verb, data):
+    logger.info(f"AWS IAM role: {filename}")
+
+    basename = os.path.basename(filename)
+    name = basename[:-len(constants.PATTERN_AWS_IAM_ROLE)]
+    arn = f"arn:aws:iam::{data['aws_account_id']}:policy/{name}"
+    client = boto3.client('iam', region_name=data["aws_region"])
+
+    try:
+        exists = client.get_role(RoleName=name)
+    except botocore.exceptions.ClientError as e:
+        logger.debug(f"AWS IAM - exception: {e}")
+        if re.search(ERROR_NO_SUCH_ENTITY, str(e), re.IGNORECASE):
+            exists = False
+        else:
+            raise e
+
+    if verb == constants.UP_VERB and exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    elif verb == constants.UP_VERB and not exists:
+        logger.debug(f"creating IAM role:{name} file:{filename}")
+        with open(filename, 'r') as f:
+            file_content = f.read()
+        response = client.create_role(
+            RoleName=name,
+            AssumeRolePolicyDocument=file_content,
+        )
+        logger.debug(f"...result: {response}")
+    elif verb == constants.DOWN_VERB and exists:
+        logger.debug(f"deleting IAM policy:{name}")
+        response = client.delete_role(
+            RoleName=name
+        )
+        logger.debug(f"...result: {response}")
+    elif verb == constants.DOWN_VERB and not exists:
+        logger.info(constants.MSG_UP_TO_DATE)
+    else:
+        raise RuntimeError(f"AWS IAM - invalid verb {verb}")
+
+    if verb == constants.UP_VERB:
+        databag_key = ("aws_iam_role_" + snakecase.convert(name))
+        extra_data = {databag_key: name}
         logger.debug(f"added to databag:{databag_key}")
         data.update(extra_data)
 
