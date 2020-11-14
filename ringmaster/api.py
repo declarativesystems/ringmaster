@@ -132,14 +132,6 @@ def do_stage(data, stage, verb):
         save_output_databag(data)
 
 
-def stack(start, verb):
-    return run_dir(os.path.join(constants.STACK_DIR, verb), start, verb)
-
-
-def user(start, verb):
-    return run_dir(os.path.join(constants.USER_DIR, verb), start, verb)
-
-
 def run(filename, verb):
     if os.path.exists(filename):
         databag_file = constants.OUTPUT_DATABAG_FILE \
@@ -159,6 +151,7 @@ def save_output_databag(data):
 
 
 def run_dir(working_dir, start, verb):
+
     if os.path.exists(working_dir):
         logger.debug(f"found: {working_dir}")
         started = False
@@ -168,8 +161,13 @@ def run_dir(working_dir, start, verb):
             else constants.DATABAG_FILE
         data = load_databag(databag_file)
 
-        # for some reason the default order is reveresed when using ranges
-        for stage in sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]")):
+        # for some reason the default order is reversed when using ranges so we
+        # must always sort. If we are bringing down a stack, reverse the order
+        # to process steps last->first - dont rely on strange behaviour
+        stages = sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]"))
+        if verb == constants.DOWN_VERB:
+            stages.reverse()
+        for stage in stages:
             if not started:
                 number = os.path.basename(stage)
                 if number == start:

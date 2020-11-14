@@ -1,10 +1,9 @@
 """ringmaster
 
 Usage:
-  ringmaster [--debug] init --aws
-  ringmaster [--debug] stack (up|down) [--start=<dir>]
-  ringmaster [--debug] user (up|down) [--start=<dir>]
-  ringmaster [--debug] run (up|down) <filename>
+  ringmaster [--debug] <dir> (up|down) [--start=<dir>]
+  ringmaster [--debug] --init --aws
+  ringmaster [--debug] --run (up|down) <filename>
   ringmaster --version
 
 Options:
@@ -51,7 +50,7 @@ def main():
     exit_status = 1
     try:
 
-        if arguments['init']:
+        if arguments['--init']:
             exit_status = aws.aws_init()
         else:
             if arguments["down"]:
@@ -61,12 +60,13 @@ def main():
             else:
                 raise RuntimeError("one of (up|down) is required")
 
-            if arguments["user"]:
-                exit_status = api.user(start, verb)
-            elif arguments["run"]:
+            if arguments["<dir>"]:
+                exit_status = api.run_dir(arguments["<dir>"], start, verb)
+            elif arguments["--run"]:
                 exit_status = api.run(arguments['<filename>'], verb)
-            elif arguments["stack"]:
-                exit_status = api.stack(start, verb)
+            else:
+                raise RuntimeError("one of <dir> or --run expected")
+
 
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
