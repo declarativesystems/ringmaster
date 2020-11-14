@@ -185,8 +185,6 @@ def run_dir(working_dir, start, verb):
         # cleanup
         logger.debug("delete intermediate databag")
         os.unlink(data[constants.KEY_INTERMEDIATE_DATABAG])
-        logger.debug("delete eksctl databag")
-        os.unlink(data[constants.KEY_EKSCTL_DATABAG])
 
     else:
         logger.error(f"missing directory: {working_dir}")
