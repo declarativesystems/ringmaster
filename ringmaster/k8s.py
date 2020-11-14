@@ -173,8 +173,8 @@ def do_helm(filename, verb, data=None):
     if data.get("debug"):
         base_cmd.append("--debug")
 
-    if data.get("namespace"):
-        namespace = data['namespace']
+    if config.get("namespace"):
+        namespace = config['namespace']
         logger.debug(f"using namespace {namespace}")
         base_cmd.append("-n")
         base_cmd.append(namespace)

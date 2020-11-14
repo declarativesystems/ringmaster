@@ -82,7 +82,7 @@ def do_ringmaster_python(filename, verb, data):
     # load data and run plugin
     module.logger = logger
     module.databag = data
-    module.main()
+    module.main(verb == constants.UP_VERB)
 
 
 handlers = {
