@@ -136,6 +136,10 @@ def do_helm(filename, verb, data=None):
     if data.get("debug"):
         base_cmd.append("--debug")
 
+    if data.get("namespace"):
+        base_cmd.append("-n")
+        base_cmd.append(data["namespace"])
+
     try:
         # helm repos...
         if verb == constants.UP_VERB:
