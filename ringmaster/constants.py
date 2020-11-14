@@ -34,3 +34,4 @@ AWS_TEMPLATE_DIR = "res/aws"
 AWS_USER_TEMPLATE_DIR = "~/.ringmaster/res/aws"
 
 COMMENT_SQL = "--"
+SNOWFLAKE_CLEANUP_FILENAME = "down.snowflake.sql"
