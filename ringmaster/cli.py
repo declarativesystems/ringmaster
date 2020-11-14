@@ -10,7 +10,7 @@ Options:
   -h --help     Show this screen.
   --version     Show version.
   --debug       Extra debugging messages
-  --start=<dir>  Start from <dir> [default: 0010]
+  --start=<dir_num>  up: start here and count up, down: start here and count down
 """
 
 from loguru import logger
@@ -46,7 +46,6 @@ def main():
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")
-    start = arguments['--start']
     exit_status = 1
     try:
 
@@ -61,7 +60,7 @@ def main():
                 raise RuntimeError("one of (up|down) is required")
 
             if arguments["<dir>"]:
-                exit_status = api.run_dir(arguments["<dir>"], start, verb)
+                exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
             elif arguments["--run"]:
                 exit_status = api.run(arguments['<filename>'], verb)
             else:

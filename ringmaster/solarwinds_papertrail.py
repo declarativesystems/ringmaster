@@ -27,7 +27,7 @@ def copy_files_from_git(git_repo, dest_dir):
     shutil.rmtree(tempdir)
 
 
-def setup(filename, verb, data):
+def do_papertrail(filename, verb, data):
     logger.info(f"solarwinds papertrail: {filename}")
     # download to relative path within this step:
     # stack/up/.../
@@ -58,15 +58,20 @@ def setup(filename, verb, data):
         except KeyError as e:
             raise RuntimeError(f"solarwinds papertrail - missing yaml key:{e} file:{filename}")
 
-
         # defined in rkubelog source code - see link at top of this file
-        k8s.register_k8s_secret("kube-system", "logging-secret", secret)
-        copy_files_from_git(git_repo, download_dir)
+        if verb == constants.UP_VERB:
+            k8s.register_k8s_secret("kube-system", "logging-secret", secret)
+            copy_files_from_git(git_repo, download_dir)
+        elif verb == constants.DOWN_VERB:
+            k8s.delete_k8s_secret("kube-system", "logging-secret")
+        else:
+            raise RuntimeError(f"solarwinds papertrail - invalid verb:{verb}")
+
         kustomizer_file = os.path.join(
             download_dir,
             constants.PATTERN_KUSTOMIZATION_FILE
         )
-        k8s.do_kustomizer(kustomizer_file, constants.UP_VERB)
+        k8s.do_kustomizer(kustomizer_file, verb)
 
     else:
         raise RuntimeError(f"solarwinds papertrail - missing config file:{filename}")

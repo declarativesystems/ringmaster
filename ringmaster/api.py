@@ -90,7 +90,7 @@ handlers = {
     constants.PATTERN_LOCAL_CLOUDFORMATION_FILE: aws.do_local_cloudformation,
     constants.PATTERN_REMOTE_CLOUDFORMATION_FILE: aws.do_remote_cloudformation,
     constants.PATTERN_KUBECTL_FILE: k8s.do_kubectl,
-    constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.setup,
+    constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.do_papertrail,
     constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,
     constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
     constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
@@ -164,10 +164,15 @@ def run_dir(working_dir, start, verb):
         # for some reason the default order is reversed when using ranges so we
         # must always sort. If we are bringing down a stack, reverse the order
         # to process steps last->first - dont rely on strange behaviour
-        stages = sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]"))
-        if verb == constants.DOWN_VERB:
-            stages.reverse()
+        stages = sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]"), reverse=(verb == constants.DOWN_VERB))
+        first_dir = os.path.basename(stages[0])
+        last_dir = os.path.basename(stages[-1])
+        if not start:
+            start = first_dir if constants.UP_VERB else last_dir
+            logger.debug(f"setting start dir:{start}")
+
         for stage in stages:
+            logger.debug(stage)
             if not started:
                 number = os.path.basename(stage)
                 if number == start:

@@ -538,8 +538,8 @@ def do_eksctl(filename, verb, data):
     try:
         util.run_cmd(["eksctl", "get", "cluster", "-n", cluster_name, "--region", aws_region], data)
         exists = True
-    except Exception as e:
-        logger.error(f"fixme - type this eception: {e}")
+    except RuntimeError as e:
+        logger.debug(f"cluster probably doesnt exist: {e}")
         exists = False
 
     if verb == constants.UP_VERB and exists:
