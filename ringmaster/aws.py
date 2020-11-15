@@ -120,7 +120,7 @@ def eks_cluster_info(aws_region, cluster_name, data):
         for i, value in enumerate(public_subnet_ids):
             route_table_id = route_table_for_subnet(ec2, public_subnet_ids[i])
             data["cluster_public_route_tables"].append(route_table_id)
-            data[f"cluster_public_route_table{i}"] = route_table_id
+            data[f"cluster_public_route_table{i+1}"] = route_table_id
 
         #   + cluster_private_route_tables
         #   + cluster_private_route_table_{n}
