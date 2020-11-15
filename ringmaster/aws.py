@@ -43,6 +43,25 @@ def aws_init():
     util.run_cmd(["cp", "-a", f"{source_dir}/.", "."])
 
 
+def route_table_for_subnet(ec2, subnet_id):
+    # get the route tables
+    logger.debug(f"looking describe_route_table subnet_id:{subnet_id}")
+    response = ec2.describe_route_tables(
+        Filters=[{
+            'Name': 'association.subnet-id',
+            'Values': [subnet_id]
+        }]
+    )
+    try:
+        logger.debug(f"...result: {response}")
+        route_table_id = response["RouteTables"][0]["RouteTableId"]
+    except KeyError as e:
+        logger.warn(f"aws - no RouteTableId found for subnet {subnet_id} - associated?")
+        route_table_id = None
+
+    return route_table_id
+
+
 def eks_cluster_info(aws_region, cluster_name, data):
     sanity_check(data)
 
@@ -60,8 +79,12 @@ def eks_cluster_info(aws_region, cluster_name, data):
     #   + cluster_vpc_cidr
     #   + cluster_private_subnets
     #   + cluster_private_subnet_{n}
+    #   + cluster_private_route_tables
+    #   + cluster_private_route_table_{n}
     #   + cluster_public_subnets
     #   + cluster_public_subnet_{n}
+    #   + cluster_public_route_tables
+    #   + cluster_public_route_table_{n}
     ec2 = boto3.client('ec2', region_name=aws_region)
     try:
 
@@ -91,12 +114,29 @@ def eks_cluster_info(aws_region, cluster_name, data):
         data["cluster_private_subnets"] = private_subnet_ids
         data["cluster_public_subnets"] = public_subnet_ids
 
+        #   + cluster_public_route_tables
+        #   + cluster_public_route_table_{n}
+        data["cluster_public_route_tables"] = []
+        for i, value in enumerate(public_subnet_ids):
+            route_table_id = route_table_for_subnet(ec2, public_subnet_ids[i])
+            data["cluster_public_route_tables"].append(route_table_id)
+            data[f"cluster_public_route_table{i}"] = route_table_id
+
+        #   + cluster_private_route_tables
+        #   + cluster_private_route_table_{n}
+        data["cluster_private_route_tables"] = []
+        for i, value in enumerate(private_subnet_ids):
+            route_table_id = route_table_for_subnet(ec2, private_subnet_ids[i])
+            data["cluster_private_route_tables"].append(route_table_id)
+            data[f"cluster_private_route_table{i+1}"] = route_table_id
+
+
         # flattened subnet ids for cloudformation/bash
         for i, value in enumerate(private_subnet_ids):
-            data[f"cluster_private_subnet{i}"] = value
+            data[f"cluster_private_subnet{i+1}"] = value
 
         for i, value in enumerate(public_subnet_ids):
-            data[f"cluster_public_subnet{i}"] = value
+            data[f"cluster_public_subnet{i+1}"] = value
 
     except KeyError as e:
         raise RuntimeError(
