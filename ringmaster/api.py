@@ -125,6 +125,9 @@ def do_stage(data, stage, verb):
         # modify dirs in-place to exclude dirs to skip and all their children
         # https://stackoverflow.com/a/19859907/3441106
         dirs[:] = list(filter(lambda x: not x == constants.SKIP_DIR, dirs))
+
+        # and then sort the files...
+        files.sort()
         for file in files:
             filename = os.path.join(root, file)
             do_file(filename, verb, data)
