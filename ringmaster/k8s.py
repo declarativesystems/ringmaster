@@ -158,9 +158,19 @@ def helm_repos(base_cmd, config, filename):
 
 def do_helm(filename, verb, data=None):
     logger.info(f"helm: {filename}")
+
+    # settings for helm...
     processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
     with open(processed_filename) as f:
         config = yaml.safe_load(f)
+
+    # if there is an adjacent `values.yaml` file, process it for substitutions and use it
+    values_yaml = os.path.join(os.path.dirname(filename), "values.yaml")
+    if os.path.exists(values_yaml):
+        processed_values_file = util.substitute_placeholders_in_file(values_yaml, "#", data)
+        logger.debug(f"helm - values: {processed_values_file}")
+    else:
+        processed_values_file = False
 
     if verb == constants.UP_VERB:
         helm_command = "install"
@@ -196,9 +206,13 @@ def do_helm(filename, verb, data=None):
             cmd = base_cmd + [helm_command, config["name"]]
             if verb == constants.UP_VERB:
                 cmd.append(config["install"])
-                for setting in config.get("set", []):
-                    cmd.append("--set")
-                    cmd.append(setting)
+                if processed_values_file:
+                    cmd.append("--values")
+                    cmd.append(processed_values_file)
+                else:
+                    for setting in config.get("set", []):
+                        cmd.append("--set")
+                        cmd.append(setting)
                 cmd += config.get("options", [])
 
             util.run_cmd(cmd)
