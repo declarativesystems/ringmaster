@@ -58,7 +58,7 @@ def run_cmd(cmd, data=None):
     logger.debug(f"running command: {cmd}")
     debug = data.get("debug", False)
     with ExitStack() as stack:
-        if debug:
+        if not debug:
             stack.enter_context(Halo(text=f"Running {cmd[0]}", spinner='dots'))
 
         with subprocess.Popen(cmd,
