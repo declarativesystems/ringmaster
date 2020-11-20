@@ -167,7 +167,7 @@ def run_dir(working_dir, start, verb):
         # for some reason the default order is reversed when using ranges so we
         # must always sort. If we are bringing down a stack, reverse the order
         # to process steps last->first - dont rely on strange behaviour
-        stages = sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]"), reverse=(verb == constants.DOWN_VERB))
+        stages = sorted(glob.glob(f"./{working_dir}/[0-9][0-9][0-9][0-9]*"), reverse=(verb == constants.DOWN_VERB))
         first_dir = os.path.basename(stages[0])
         last_dir = os.path.basename(stages[-1])
         if not start:
