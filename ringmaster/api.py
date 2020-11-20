@@ -117,7 +117,7 @@ def do_file(filename, verb, data):
     if handler:
         handler(filename, verb, data)
     else:
-        logger.info(f"no handler for {filename} - skipped")
+        logger.debug(f"no handler for {filename} - skipped")
 
 
 def do_stage(data, stage, verb):
@@ -143,6 +143,12 @@ def run(filename, verb):
         do_file(filename, verb, data)
     else:
         logger.error(f"file not found: {filename}")
+
+
+def delete_output_databag():
+    if os.path.exists(constants.OUTPUT_DATABAG_FILE):
+        logger.debug(f"deleting databag: {constants.OUTPUT_DATABAG_FILE}")
+        os.unlink(constants.OUTPUT_DATABAG_FILE)
 
 
 def save_output_databag(data):
@@ -191,6 +197,9 @@ def run_dir(working_dir, start, verb):
         # cleanup
         logger.debug("delete intermediate databag")
         os.unlink(data[constants.KEY_INTERMEDIATE_DATABAG])
+
+        if verb == constants.DOWN_VERB:
+            delete_output_databag()
 
     else:
         logger.error(f"missing directory: {working_dir}")

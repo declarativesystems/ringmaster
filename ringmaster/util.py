@@ -6,6 +6,8 @@ import subprocess
 import requests
 import snakecase
 import json
+from contextlib import ExitStack
+from halo import Halo
 
 
 def walk(data, parent_name=None):
@@ -54,25 +56,31 @@ def run_cmd(cmd, data=None):
     env = merge_env(data)
     logger.trace(f"merged environment: {env}")
     logger.debug(f"running command: {cmd}")
+    debug = data.get("debug", False)
+    with ExitStack() as stack:
+        if debug:
+            stack.enter_context(Halo(text=f"Running {cmd[0]}", spinner='dots'))
 
-    with subprocess.Popen(cmd,
-                          stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT,
-                          shell=isinstance(cmd, str),
-                          env=env) as proc:
-        while True:
-            line = proc.stdout.readline()
-            while line:
-                line_decoded = line.decode("UTF-8")
-                logger.log("OUTPUT", line_decoded.strip())
-                output += line_decoded
-
+        with subprocess.Popen(cmd,
+                              stdout=subprocess.PIPE,
+                              stderr=subprocess.STDOUT,
+                              shell=isinstance(cmd, str),
+                              env=env) as proc:
+            while True:
                 line = proc.stdout.readline()
-            if proc.poll() is not None:
-                break
+                while line:
+                    line_decoded = line.decode("UTF-8")
+                    if debug:
+                        logger.log("OUTPUT", line_decoded.strip())
+                    output += line_decoded
+
+                    line = proc.stdout.readline()
+                if proc.poll() is not None:
+                    break
         rc = proc.poll()
         logger.debug(f"result: {rc}")
         if rc != 0:
+            logger.error(output)
             raise RuntimeError(f"Command failed with non-zero exit status:{rc} - {cmd}")
     return output
 
