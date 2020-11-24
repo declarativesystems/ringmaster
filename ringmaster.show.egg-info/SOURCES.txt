@@ -1,5 +1,6 @@
 MANIFEST.in
 README.md
+pyproject.toml
 setup.py
 ringmaster/__init__.py
 ringmaster/api.py
@@ -14,6 +15,7 @@ ringmaster.show.egg-info/PKG-INFO
 ringmaster.show.egg-info/SOURCES.txt
 ringmaster.show.egg-info/dependency_links.txt
 ringmaster.show.egg-info/entry_points.txt
+ringmaster.show.egg-info/requires.txt
 ringmaster.show.egg-info/top_level.txt
 ringmaster/res/aws/databag.yaml
 ringmaster/res/aws/stack/down/0010/cluster.sh

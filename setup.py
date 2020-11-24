@@ -25,5 +25,13 @@ setuptools.setup(
         "console_scripts": (['ringmaster=ringmaster.cli:main'],)
     },
     include_package_data=True,
-    install_requires=[]
+    install_requires=[
+        "python-dateutil",
+        "boto3",
+        "snakecase",
+        "cfn_flip",
+
+        # https://github.com/snowflakedb/snowflake-connector-python/issues/284
+        "snowflake-connector-python-lite",
+    ]
 )

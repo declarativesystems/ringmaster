@@ -1,0 +1,5 @@
+python-dateutil
+boto3
+snakecase
+cfn_flip
+snowflake-connector-python-lite
