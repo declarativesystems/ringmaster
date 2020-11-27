@@ -67,7 +67,8 @@ def run_kubectl(verb, flag, path, data):
     else:
         raise ValueError(f"invalid verb: {verb}")
 
-    cmd = ["kubectl", kubectl_cmd, flag, path]
+    # --force is to recreate any immutable resources we touched
+    cmd = ["kubectl", kubectl_cmd, "--force", flag, path]
     if data.get("debug"):
         cmd.append("-v=2")
     run_cmd(cmd, data)
