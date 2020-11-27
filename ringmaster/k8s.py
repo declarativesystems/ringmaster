@@ -223,3 +223,62 @@ def do_helm(filename, verb, data=None):
         else:
             raise e
 
+def do_secret_kubectl(filename, verb, data):
+    """create or delete a secret from a kubectl template file. This results in
+    calling the k8s api directly - no processed file (which would contain the
+    secret...) is created
+
+    The input yaml file must be formatted like this:
+
+    ---
+    apiVersion: v1
+    kind: Secret
+    metadata:
+      name: ...
+    ---
+    data:
+        keyname: value (we will base64 encode it for you)
+    """
+    logger.info(f"secret_kubectl: {filename}")
+
+    # step 1 - process all substitutions
+    yaml_string = util.substitute_placeholders_in_memory(filename, data)
+
+    # step 2 - load yaml
+    first = True
+    data = None
+    for record in yaml.safe_load_all(yaml_string):
+        if first:
+            # step 3 - load first record which is is the k8s secret template
+            data = record
+
+            # create the `data` key if needed
+            if not data.get("data"):
+                data["data"] = {}
+            first = False
+            logger.debug(f"secret_kubectl - processed first record of {filename}")
+        elif verb == constants.UP_VERB:
+            # step 4 - 2nd record is data field to add to `data` all secrets
+            # were already inserted in the substitute placeholders phase so
+            # just need to base64 encode it
+            # This is only done in UP mode - if we are going down the value
+            # of the secret doesnt matter
+            secret_data = record.get("data")
+            if secret_data:
+                for k, v in record["data"].items():
+                    logger.debug(f"secret_kubectl - adding data field:{k} ")
+                    data["data"][k] = util.base64encode(v)
+                logger.debug(f"secret_kubectl - processed subsequent record of {filename}")
+            else:
+                raise RuntimeError(f"secret_kubectl - Non-first document missing key `data` filename:${filename}")
+
+    # step 5 - secret completed - save it somewhere, kubectl, delete
+    _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
+    with open(secret_file, 'w') as outfile:
+        yaml.dump(data, outfile)
+
+    logger.debug("secret_kubectl - creating secret with kubectl")
+    logger.info(f"secret: {data}")
+
+    run_kubectl(verb, "-f", secret_file, data)
+    os.unlink(secret_file)

@@ -98,6 +98,7 @@ def base64encode(string):
     base64_bytes = base64.b64encode(string_bytes)
     return base64_bytes.decode('ascii')
 
+
 def resolve_env(key):
     resolved = os.environ.get(key)
     if not resolved:
@@ -130,30 +131,52 @@ def resolve_rfn(replacement_token):
     return fn_name, replacement_token_name
 
 def resolve_token_value(replacement_token, data):
-    """the token value is the first section of a variable pipe, eg for
-    `foo|base64` or `env(bar)|base64`, we are resolving the string to the
-    left of `|`.
-    This function only receives the leftmost string"""
+    """the token value is the value we want to obtain from a function call or
+    by looking in the databag. Multiple values can be joined with string
+    literals, eg `foo':'env(bar)` would look in the databag for `foo`, append
+    string literal `:` and the resolve `bar` from the environment"""
 
-    fn_name, replacement_token_name = resolve_rfn(replacement_token)
-    if fn_name:
-        fn = resolve_functions.get(fn_name)
-        if fn:
-            resolved_token = fn(replacement_token_name)
-        else:
-            raise RuntimeError(f"no such resolve function:{fn_name}")
-    else:
-        resolved_token = data.get(replacement_token_name)
-        if not resolved_token:
-            raise KeyError(f"requested field: {replacement_token_name} missing from databag. Available: {data.keys()}")
-    return resolved_token
+    # split on quoted string literals, this gives a list which includes the
+    # captured separators:
+    # >>> re.split(constants.SINGLE_QUOTED_STRING_REGEX, "something':'else':'")
+    # ['something', "':'", 'else', "':'", '']
+    replacement_tokens_to_resolve = re.split(
+        constants.SINGLE_QUOTED_STRING_REGEX,
+        replacement_token,
+    )
+
+    resolved = ""
+    logger.debug(f"replacement token list: {replacement_tokens_to_resolve}")
+    for token in replacement_tokens_to_resolve:
+        logger.trace(f"checking token:{token}")
+        if token.startswith("'"):
+            # leading quote denotes string literal - remove any backslashes as
+            # well as the quotes themselves
+            resolved += token.replace("\\", "")[1:-1]
+        elif token != "":
+            fn_name, token_name = resolve_rfn(token)
+            if fn_name:
+                fn = resolve_functions.get(fn_name)
+                if fn:
+                    resolved_token = fn(token_name)
+                else:
+                    raise RuntimeError(f"no such resolve function:{fn_name}")
+            else:
+                resolved_token = data.get(token_name)
+                if not resolved_token:
+                    raise KeyError(f"requested field: {token_name} missing from databag. Available: {data.keys()}")
+            resolved += resolved_token
+    return resolved
 
 
-def resolve_token_pipe(token, data):
+def resolve_replacement_token(token, data):
     """split a token eg username|base64 on the pipe `|` operator and apply each operator"""
     token_split = token.split("|")
-    replacement_token = token_split[0]
-    resolved_token = resolve_token_value(replacement_token, data)
+
+    # the value is the the part before the first pipe - it gets replaced with
+    # a value from running a function or looking in the databag
+    replacement_token_value = token_split[0]
+    resolved_token = resolve_token_value(replacement_token_value, data)
 
     if len(token_split) > 1:
         # apply any operators to resolved token
@@ -172,18 +195,32 @@ def substitute_placeholders_line(line, data):
     replacement_tokens = re.findall(constants.SUBSTITUTE_VARIABLE_REGEX, line)
     # set is used to de-dupe the list
     for replacement_token_braced in list(set(replacement_tokens)):
-        # chomp the ${} leaving the variable name
+        # chomp the ${} leaving the replacement token - eg: ${foo':'bar|base64} -> foo':'bar|base64
         replacement_token = replacement_token_braced[2:-1]
-        resolved_token = resolve_token_pipe(replacement_token, data)
+        resolved_token = resolve_replacement_token(replacement_token, data)
         line = line.replace(replacement_token_braced, resolved_token)
 
     return line
 
 
-def substitute_placeholders_in_file(filename, comment_delim, data):
+def substitute_placeholders_in_memory(filename, data):
     """replace all variables placeholders in filename, return path to substituted file"""
     filename_no_extension, file_extension = os.path.splitext(filename)
-    processed_file = filename_no_extension + ".processed" + file_extension
+    buffer = ""
+    if os.path.exists(filename):
+        with open(filename, "r") as in_file:
+            for line in in_file:
+                buffer += substitute_placeholders_line(line, data)
+    else:
+        raise RuntimeError(f"No such file: {filename}")
+
+    return buffer
+
+def substitute_placeholders_in_file(filename, comment_delim, data, processed_file=None):
+    """replace all variables placeholders in filename, return path to substituted file"""
+    filename_no_extension, file_extension = os.path.splitext(filename)
+    processed_file = processed_file if processed_file else filename_no_extension + ".processed" + file_extension
+
     if os.path.exists(filename):
         with open(processed_file, "w") as out_file:
             out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")

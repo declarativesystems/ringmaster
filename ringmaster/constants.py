@@ -24,9 +24,11 @@ PATTERN_AWS_IAM_POLICY = ".iam_policy.json"
 PATTERN_AWS_IAM_ROLE = ".iam_role.json"
 PATTERN_SECRETS_MANAGER = "secretsmanager.yaml"
 PATTERN_EKSCTL_CONFIG = ".eksctl.yaml"
+PATTERN_SECRET_KUBECTL = ".secret_kubectl.yaml"
 
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{[^}]+})"
+SINGLE_QUOTED_STRING_REGEX = r"('.*?(?<!\\)')"
 
 KEY_INTERMEDIATE_DATABAG="intermediate_databag_file"
 

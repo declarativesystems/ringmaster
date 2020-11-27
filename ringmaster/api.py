@@ -100,6 +100,7 @@ handlers = {
     constants.PATTERN_AWS_IAM_ROLE: aws.do_iam_role,
     constants.PATTERN_SECRETS_MANAGER: aws.do_secrets_manager,
     constants.PATTERN_EKSCTL_CONFIG: aws.do_eksctl,
+    constants.PATTERN_SECRET_KUBECTL: k8s.do_secret_kubectl,
 }
 
 
