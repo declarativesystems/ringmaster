@@ -1,11 +1,12 @@
 import setuptools
+import ringmaster.version as version
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
     name="ringmaster.show",
-    version="0.0.0",
+    version=version.version,
     author="Geoff Williams",
     author_email="None",
     description="master of the ring!",

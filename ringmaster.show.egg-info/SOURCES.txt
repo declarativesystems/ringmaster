@@ -11,6 +11,7 @@ ringmaster/k8s.py
 ringmaster/snowflake.py
 ringmaster/solarwinds_papertrail.py
 ringmaster/util.py
+ringmaster/version.py
 ringmaster.show.egg-info/PKG-INFO
 ringmaster.show.egg-info/SOURCES.txt
 ringmaster.show.egg-info/dependency_links.txt

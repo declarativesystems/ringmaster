@@ -19,6 +19,7 @@ import sys
 from docopt import docopt
 import ringmaster.aws as aws
 import ringmaster.api as api
+import ringmaster.version as version
 import ringmaster.constants as constants
 
 debug = False
@@ -42,7 +43,7 @@ def setup_logging(level, logger_name=None):
 
 
 def main():
-    arguments = docopt(__doc__, version=pkg_resources.require("ringmaster")[0].version)
+    arguments = docopt(__doc__, version=version.version)
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")

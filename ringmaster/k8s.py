@@ -1,4 +1,3 @@
-import base64
 import tempfile
 import os
 import yaml
@@ -54,10 +53,7 @@ def copy_kustomization_files(root_dir, target_dir):
         shutil.copy(source_file, dest_file)
 
 
-def base64encode(string):
-    string_bytes = string.encode('ascii')
-    base64_bytes = base64.b64encode(string_bytes)
-    return base64_bytes.decode('ascii')
+
 
 
 def run_kubectl(verb, flag, path, data):
@@ -98,7 +94,7 @@ def register_k8s_secret(secret_namespace, secret_name, data):
 
     # each member of data needs to have its value base64 encoded
     for k, v in data.items():
-        secret_data["data"][k] = base64encode(v)
+        secret_data["data"][k] = util.base64encode(v)
 
     # secret completed - save it somewhere, kubectl, delete
     _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")

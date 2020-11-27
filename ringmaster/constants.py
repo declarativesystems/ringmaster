@@ -26,7 +26,7 @@ PATTERN_SECRETS_MANAGER = "secretsmanager.yaml"
 PATTERN_EKSCTL_CONFIG = ".eksctl.yaml"
 
 MSG_UP_TO_DATE = "[√] up to date"
-SUBSTITUTE_VARIABLE_REGEX = r"(\$\{\w+\})"
+SUBSTITUTE_VARIABLE_REGEX = r"(\$\{[^}]+})"
 
 KEY_INTERMEDIATE_DATABAG="intermediate_databag_file"
 
@@ -35,3 +35,7 @@ AWS_USER_TEMPLATE_DIR = "~/.ringmaster/res/aws"
 
 COMMENT_SQL = "--"
 SNOWFLAKE_CLEANUP_FILENAME = "down.snowflake.sql"
+
+
+CFN_BASE64 = "base64"
+RFN_ENV = "env"
