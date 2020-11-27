@@ -9,14 +9,17 @@ def test_string_to_snakecase():
            == util.string_to_snakecase("mixed-CasePascalCaseAndHyphenSeparated")
 
 
-def test_resolve_token_pipe():
-    value = "avalue"
-    value_base64 = util.base64encode(value)
+def test_resolve_replacement_token():
     data = {
-        "atoken": value
+        "atoken": "avalue",
+        "another_token": "someother",
     }
-    assert value == util.resolve_replacement_token("atoken", data)
-    assert value_base64 == util.resolve_replacement_token("atoken|base64", data)
+    assert "avalue" == util.resolve_replacement_token("atoken", data)
+    assert util.base64encode("avalue") == util.resolve_replacement_token("atoken|base64", data)
+
+    # whole expression should be base64 encoded by the pipe
+    assert util.base64encode("avalue:someother") == util.resolve_replacement_token("atoken':'another_token|base64", data)
+
 
     # raise on missing token
     with pytest.raises(KeyError):
