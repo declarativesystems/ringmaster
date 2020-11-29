@@ -80,7 +80,11 @@ def do_ringmaster_python(filename, verb, data):
     spec.loader.exec_module(module)
 
     # load data and run plugin
-    module.logger = logger
+    # logger.enable("storage_security_groups.ringmaster")
+    # logger.enable("storage_security_groups")
+    # logger.enable("__main__")
+    # logger.enable(module_name)
+    # module.loggey = logger
     module.databag = data
     module.main(verb == constants.UP_VERB)
 
