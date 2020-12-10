@@ -71,7 +71,14 @@ def run_kubectl(verb, flag, path, data):
     cmd = ["kubectl", kubectl_cmd, "--force", flag, path]
     if data.get("debug"):
         cmd.append("-v=2")
-    run_cmd(cmd, data)
+
+    try:
+        run_cmd(cmd, data)
+    except RuntimeError as e:
+        if verb == constants.DOWN_VERB:
+            logger.warning("Error running kubectl but system is going down - ignoring")
+        else:
+            raise e
 
 
 def delete_k8s_secret(secret_namespace, secret_name):
