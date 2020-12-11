@@ -203,38 +203,52 @@ def substitute_placeholders_line(line, data):
     return line
 
 
-def substitute_placeholders_in_memory2(lines, data):
+def substitute_placeholders_from_memory_to_memory(lines, verb, data):
+    """replace all variables placeholders list of lines and return the result"""
     buffer = ""
-    for line in lines:
-        buffer += substitute_placeholders_line(line, data)
+    try:
+        for line in lines:
+            buffer += substitute_placeholders_line(line, data)
+    except KeyError as e:
+        if verb == constants.DOWN_VERB:
+            logger.warning(f"returning original content due to: {e}")
+            buffer = lines
+        else:
+            raise e
     return buffer
 
 
-def substitute_placeholders_in_memory(filename, data):
+def substitute_placeholders_from_file_to_memory(filename, verb, data):
     """replace all variables placeholders in filename and return the result"""
     if os.path.exists(filename):
         with open(filename, "r") as in_file:
-            buffer = substitute_placeholders_in_memory2(in_file, data)
+            buffer = substitute_placeholders_from_memory_to_memory(in_file, verb, data)
     else:
         raise RuntimeError(f"No such file: {filename}")
 
     return buffer
 
 
-def substitute_placeholders_in_file(filename, comment_delim, data, processed_file=None):
+def substitute_placeholders_from_file_to_file(filename, comment_delim, verb, data, processed_file=None):
     """replace all variables placeholders in filename, return path to substituted file"""
     filename_no_extension, file_extension = os.path.splitext(filename)
     processed_file = processed_file if processed_file else filename_no_extension + ".processed" + file_extension
 
-    if os.path.exists(filename):
-        with open(processed_file, "w") as out_file:
-            out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
-            with open(filename, "r") as in_file:
-                for line in in_file:
-                    out_file.write(substitute_placeholders_line(line, data))
-    else:
-        raise RuntimeError(f"No such file: {filename}")
-
+    try:
+        if os.path.exists(filename):
+            with open(processed_file, "w") as out_file:
+                out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
+                with open(filename, "r") as in_file:
+                    for line in in_file:
+                        out_file.write(substitute_placeholders_line(line, data))
+        else:
+            raise RuntimeError(f"No such file: {filename}")
+    except KeyError as e:
+        if verb == constants.DOWN_VERB:
+            logger.warning(f"returning original file due to: {e}")
+            processed_file = filename
+        else:
+            raise e
     return processed_file
 
 

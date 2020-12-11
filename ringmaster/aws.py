@@ -191,7 +191,7 @@ def stack_params(filename, data):
                 # cloudformation allows the empty string as a default
                 logger.debug(f"Using cloudformation default for {cfn_param}")
             else:
-                raise RuntimeError(
+                raise KeyError(
                     f"Cloudformation file:{filename} missing param:{cfn_param} "
                         f"expected databag:{snakecase_param}, avaiable:{data.keys()}"
                 )
@@ -274,7 +274,13 @@ def do_local_cloudformation(filename, verb, data):
     template_body = pathlib.Path(filename).read_text()
     stack_name = filename_to_stack_name(filename)
 
-    cloudformation(stack_name, filename, verb, data, template_body=template_body)
+    try:
+        cloudformation(stack_name, filename, verb, data, template_body=template_body)
+    except KeyError as e:
+        if verb == constants.DOWN_VERB:
+            logger.warning(f"missing values prevent running cloudformation - skipping as system going down: {e}")
+        else:
+            raise e
 
 
 def cloudformation(stack_name, filename, verb, data, template_body=None, template_url=None):
@@ -549,7 +555,7 @@ def delete_secret(client, secret_id):
 # friendly name of the secret.
 def do_secrets_manager(filename, verb, data):
     logger.info(f"secretsmanager: {filename}")
-    processed_file = util.substitute_placeholders_in_file(filename, "#", data)
+    processed_file = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
     with open(processed_file) as f:
         config = yaml.safe_load(f)
 
@@ -583,7 +589,7 @@ def check_requirements():
 
 def do_eksctl(filename, verb, data):
     logger.info(f"eksctl: ${filename}")
-    processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
+    processed_filename = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
     with open(processed_filename) as f:
         config = yaml.safe_load(f)
 

@@ -31,10 +31,10 @@ def test_connection(cs):
     one_row = cs.fetchone()
 
 
-def process_file_and_connect(filename, data):
+def process_file_and_connect(filename, verb, data):
     # process substitutions
-    processed_file = util.substitute_placeholders_in_file(
-        filename, constants.COMMENT_SQL, data
+    processed_file = util.substitute_placeholders_from_file_to_file(
+        filename, constants.COMMENT_SQL, verb, data
     )
     logger.debug(f"snowflake processed file: {processed_file}")
 
@@ -50,7 +50,7 @@ def do_snowflake_sql(filename, verb, data):
             (verb == constants.DOWN_VERB and script_name == constants.SNOWFLAKE_CLEANUP_FILENAME):
 
         logger.info(f"snowflake sql: {filename}")
-        cs, processed_file = process_file_and_connect(filename, data)
+        cs, processed_file = process_file_and_connect(filename, verb, data)
 
         # build up stmt line-by-line, when we find `;` execute stmt and
         # empty the variable for the next iteration
@@ -71,7 +71,7 @@ def do_snowflake_query(filename, verb, data):
     """Query snowflake for a single row of values, add each column to the databag"""
     if verb == constants.UP_VERB:
         logger.info(f"snowflake query: {filename}")
-        cs, processed_file = process_file_and_connect(filename, data)
+        cs, processed_file = process_file_and_connect(filename, verb, data)
         extra_data = {}
 
         # load the entire processed file and run EACH STATEMENT

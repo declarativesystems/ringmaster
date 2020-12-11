@@ -50,6 +50,15 @@ def copy_kustomization_files(root_dir, target_dir):
         logger.debug(f"copy {source_file} {dest_file}")
         shutil.copy(source_file, dest_file)
 
+def check_kubectl_session():
+    """check kubectl connected to cluster before running commands"""
+    try:
+        run_cmd("kubectl config current-context")
+        connected = True
+    except RuntimeError:
+        connected = False
+    return connected
+
 
 def run_kubectl(verb, flag, path, data):
     if data is None:
@@ -62,19 +71,23 @@ def run_kubectl(verb, flag, path, data):
     else:
         raise ValueError(f"invalid verb: {verb}")
 
-    # --force is to recreate any immutable resources we touched
-    cmd = ["kubectl", kubectl_cmd, "--force", flag, path]
-    if data.get("debug"):
-        cmd.append("-v=2")
+    if check_kubectl_session():
+        # --force is to recreate any immutable resources we touched
+        cmd = ["kubectl", kubectl_cmd, "--force", flag, path]
+        if data.get("debug"):
+            cmd.append("-v=2")
 
-    try:
-        run_cmd(cmd, data)
-    except RuntimeError as e:
-        if verb == constants.DOWN_VERB:
-            logger.warning("Error running kubectl but system is going down - ignoring")
-        else:
-            raise e
-
+        try:
+            run_cmd(cmd, data)
+        except RuntimeError as e:
+            if verb == constants.DOWN_VERB:
+                logger.warning("Error running kubectl but system is going down - ignoring")
+            else:
+                raise e
+    elif verb == constants.DOWN_VERB:
+        logger.warning("kubectl has no current context but system is going down - ignoring")
+    else:
+        raise RuntimeError("kubectl not logged in - context is not set")
 
 def delete_k8s_secret(secret_namespace, secret_name):
     try:
@@ -113,14 +126,20 @@ def register_k8s_secret(secret_namespace, secret_name, data):
 def do_kubectl(filename, verb, data=None):
     # substitute ${...} variables from databag, bomb out if any missing
     logger.info(f"kubectl: {filename}")
-    processed_file = util.substitute_placeholders_in_file(filename, "#", data)
-    logger.debug(f"kubectl processed file: {processed_file}")
 
     try:
+        processed_file = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
+        logger.debug(f"kubectl processed file: {processed_file}")
+
         run_kubectl(verb, "-f", processed_file, data)
     except RuntimeError as e:
         if verb == constants.DOWN_VERB:
-            logger.error(f"kubectl error - moving on: {e}")
+            logger.warning(f"kubectl error - moving on: {e}")
+        else:
+            raise e
+    except KeyError as e:
+        if verb == constants.DOWN_VERB:
+            logger.warning(f"missing key - moving on: {e}")
         else:
             raise e
 
@@ -159,14 +178,14 @@ def do_helm(filename, verb, data=None):
     logger.info(f"helm: {filename}")
 
     # settings for helm...
-    processed_filename = util.substitute_placeholders_in_file(filename, "#", data)
+    processed_filename = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
     with open(processed_filename) as f:
         config = yaml.safe_load(f)
 
     # if there is an adjacent `values.yaml` file, process it for substitutions and use it
     values_yaml = os.path.join(os.path.dirname(filename), "values.yaml")
     if os.path.exists(values_yaml):
-        processed_values_file = util.substitute_placeholders_in_file(values_yaml, "#", data)
+        processed_values_file = util.substitute_placeholders_from_file_to_file(values_yaml, "#", verb, data)
         logger.debug(f"helm - values: {processed_values_file}")
     else:
         processed_values_file = False
@@ -257,7 +276,7 @@ def do_secret_kubectl(filename, verb, data):
     # with a 'blank' first record so skip until we find something
     yaml_data = False
     while not yaml_data:
-        yaml_string_metadata = util.substitute_placeholders_in_memory2(records[0], data)
+        yaml_string_metadata = util.substitute_placeholders_from_memory_to_memory(records[0], verb, data)
 
         # step 3 - convert string to yaml data structure - this will be merged
         # with the looked-up data from record 2 to build the entire secret
@@ -278,7 +297,7 @@ def do_secret_kubectl(filename, verb, data):
                 raw = records[1]
             except IndexError:
                 raise RuntimeError(f"missing ")
-            yaml_string_secret = util.substitute_placeholders_in_memory2(raw, data)
+            yaml_string_secret = util.substitute_placeholders_from_memory_to_memory(raw, verb, data)
             yaml_data_secret = yaml.safe_load_all(yaml_string_secret)
 
             # parsed yaml must contain `data` key...
