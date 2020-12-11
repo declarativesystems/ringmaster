@@ -3,13 +3,11 @@ import os
 import yaml
 import shutil
 from loguru import logger
-import json
 from .util import run_cmd
 from pathlib import Path
 from ringmaster import constants
 import ringmaster.util as util
-import subprocess
-
+import re
 
 def copy_kustomization_files(root_dir, target_dir):
 
@@ -51,9 +49,6 @@ def copy_kustomization_files(root_dir, target_dir):
         dest_file = os.path.join(target_dir, patch_file)
         logger.debug(f"copy {source_file} {dest_file}")
         shutil.copy(source_file, dest_file)
-
-
-
 
 
 def run_kubectl(verb, flag, path, data):
@@ -249,44 +244,72 @@ def do_secret_kubectl(filename, verb, data):
     """
     logger.info(f"secret_kubectl: {filename}")
 
-    # step 1 - process all substitutions
-    yaml_string = util.substitute_placeholders_in_memory(filename, data)
+    # step 1 - read entire file into memory and split on yaml record separator
+    # `---` make sure we have exactly 2 records
+    with open(filename) as f:
+        file_contents = f.read()
 
-    # step 2 - load yaml
-    first = True
-    data = None
-    for record in yaml.safe_load_all(yaml_string):
-        if first:
-            # step 3 - load first record which is is the k8s secret template
-            data = record
+    records = re.split(r'\s*---\s*', file_contents)
 
-            # create the `data` key if needed
-            if not data.get("data"):
-                data["data"] = {}
-            first = False
-            logger.debug(f"secret_kubectl - processed first record of {filename}")
-        elif verb == constants.UP_VERB:
-            # step 4 - 2nd record is data field to add to `data` all secrets
-            # were already inserted in the substitute placeholders phase so
-            # just need to base64 encode it
-            # This is only done in UP mode - if we are going down the value
-            # of the secret doesnt matter
-            secret_data = record.get("data")
+
+    # step 2 - process all substitutions in first document (metadata)
+    # since yaml lets the file start with `---` its possible to end up
+    # with a 'blank' first record so skip until we find something
+    yaml_data = False
+    while not yaml_data:
+        yaml_string_metadata = util.substitute_placeholders_in_memory2(records[0], data)
+
+        # step 3 - convert string to yaml data structure - this will be merged
+        # with the looked-up data from record 2 to build the entire secret
+        yaml_data = yaml.safe_load(yaml_string_metadata)
+
+        if not yaml_data:
+            # skip this blank record and try again...
+            records.pop(0)
+
+    record_count = len(records)
+    if record_count == 2:
+        # secret file in correct format
+
+        # step 4 - record 2 contains the secret data to add - if we are upping
+        # substitute in the real values
+        if verb == constants.UP_VERB:
+            try:
+                raw = records[1]
+            except IndexError:
+                raise RuntimeError(f"missing ")
+            yaml_string_secret = util.substitute_placeholders_in_memory2(raw, data)
+            yaml_data_secret = yaml.safe_load_all(yaml_string_secret)
+
+            # parsed yaml must contain `data` key...
+            secret_data = yaml_data_secret.get("data")
             if secret_data:
-                for k, v in record["data"].items():
+                # create the `data` key if needed
+                if not secret_data.get("data"):
+                    secret_data["data"] = {}
+
+                # base 64 encode each field and add it to the yaml secret
+                for k, v in secret_data.items():
                     logger.debug(f"secret_kubectl - adding data field:{k} ")
-                    data["data"][k] = util.base64encode(v)
-                logger.debug(f"secret_kubectl - processed subsequent record of {filename}")
+                    yaml_data["data"][k] = util.base64encode(v)
             else:
-                raise RuntimeError(f"secret_kubectl - Non-first document missing key `data` filename:${filename}")
+                raise RuntimeError(f"secret_kubectl - record 2 missing key `data` filename:${filename}")
 
-    # step 5 - secret completed - save it somewhere, kubectl, delete
-    _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
-    with open(secret_file, 'w') as outfile:
-        yaml.dump(data, outfile)
+        else:
+            # Add dummy section to keep kubectl from complaining
+            yaml_data["data"] = {}
 
-    logger.debug("secret_kubectl - creating secret with kubectl")
-    logger.info(f"secret: {data}")
+        # step 5 - secret completed - save it somewhere, kubectl, delete
+        _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
+        with open(secret_file, 'w') as outfile:
+            yaml.dump(data, outfile)
 
-    run_kubectl(verb, "-f", secret_file, data)
-    os.unlink(secret_file)
+        logger.debug("secret_kubectl - creating secret with kubectl")
+
+        # print the entire secret for debug purposes ;-)
+        logger.debug(f"secret: {data}")
+
+        run_kubectl(verb, "-f", secret_file, data)
+        os.unlink(secret_file)
+    else:
+        raise RuntimeError(f"secret_kubectl - ${filename} must contain exactly 2 documents, found:{record_count}")

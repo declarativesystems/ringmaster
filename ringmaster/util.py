@@ -203,18 +203,23 @@ def substitute_placeholders_line(line, data):
     return line
 
 
-def substitute_placeholders_in_memory(filename, data):
-    """replace all variables placeholders in filename, return path to substituted file"""
-    filename_no_extension, file_extension = os.path.splitext(filename)
+def substitute_placeholders_in_memory2(lines, data):
     buffer = ""
+    for line in lines:
+        buffer += substitute_placeholders_line(line, data)
+    return buffer
+
+
+def substitute_placeholders_in_memory(filename, data):
+    """replace all variables placeholders in filename and return the result"""
     if os.path.exists(filename):
         with open(filename, "r") as in_file:
-            for line in in_file:
-                buffer += substitute_placeholders_line(line, data)
+            buffer = substitute_placeholders_in_memory2(in_file, data)
     else:
         raise RuntimeError(f"No such file: {filename}")
 
     return buffer
+
 
 def substitute_placeholders_in_file(filename, comment_delim, data, processed_file=None):
     """replace all variables placeholders in filename, return path to substituted file"""
