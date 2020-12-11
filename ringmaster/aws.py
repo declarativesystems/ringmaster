@@ -406,11 +406,31 @@ def do_iam_policy(filename, verb, data):
         )
         logger.debug(f"...result: {response}")
     elif verb == constants.DOWN_VERB and policy_exists:
-        logger.debug(f"deleting IAM policy:{policy_name}")
-        response = client.delete_policy(
-            PolicyArn=policy_arn
-        )
-        logger.debug(f"...result: {response}")
+        logger.debug(f"delete all versions of IAM policy:{policy_name}...")
+        # delete all versions of the policy and then the policy itself
+        response = client.list_policy_versions(PolicyArn=policy_arn)
+
+        for version_info in response["Versions"]:
+            if not version_info["IsDefaultVersion"]:
+                version_id = version_info["VersionId"]
+                logger.debug(f"deleting IAM policy:{policy_arn} version:{version_id}...")
+                response = client.delete_policy_version(
+                    PolicyArn=policy_arn,
+                    VersionId=version_id,
+                )
+                logger.debug(f"...result: {response}")
+
+        logger.debug(f"deleting overall IAM policy:{policy_name}...")
+        try:
+            response = client.delete_policy(
+                PolicyArn=policy_arn
+            )
+            logger.debug(f"...result: {response}")
+        except botocore.exceptions.ClientError as e:
+            if verb == constants.DOWN_VERB:
+                logger.warning(f"Error deleting policy:{policy_arn} - continuing as system is going down")
+            else:
+                raise e
     elif verb == constants.DOWN_VERB and not policy_exists:
         logger.info(constants.MSG_UP_TO_DATE)
     else:

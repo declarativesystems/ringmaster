@@ -25,6 +25,8 @@ def load_databag(databag_file):
     # general program settings
     data = {
         "msg_up_to_date": constants.MSG_UP_TO_DATE,
+        "up_verb": constants.UP_VERB,
+        "down_verb": constants.UP_VERB,
     }
 
     # load values from user
@@ -63,7 +65,8 @@ def load_intermediate_databag(data):
 def do_bash_script(filename, verb, data):
     # bash scripts
     logger.info(f"bash script: {filename}")
-    run_cmd(f"bash {filename}", data)
+    logger.info(f"write JSON to file at ${constants.KEY_INTERMEDIATE_DATABAG} to add to databag")
+    run_cmd(f"bash {filename} {verb}", data)
 
     load_intermediate_databag(data)
 
@@ -86,7 +89,7 @@ def do_ringmaster_python(filename, verb, data):
     # logger.enable(module_name)
     # module.loggey = logger
     module.databag = data
-    module.main(verb == constants.UP_VERB)
+    module.main(verb)
 
 
 handlers = {
