@@ -208,7 +208,11 @@ def substitute_placeholders_from_memory_to_memory(lines, verb, data):
     buffer = ""
     try:
         for line in lines:
-            buffer += substitute_placeholders_line(line, data)
+            substituted_line = substitute_placeholders_line(line, data)
+            buffer += substituted_line
+            if not substituted_line.endswith("\n"):
+                # some input streams may have line endings stripped - put em back
+                buffer += "\n"
     except KeyError as e:
         if verb == constants.DOWN_VERB:
             logger.warning(f"returning original content due to: {e}")

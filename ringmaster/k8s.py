@@ -276,7 +276,7 @@ def do_secret_kubectl(filename, verb, data):
     # with a 'blank' first record so skip until we find something
     yaml_data = False
     while not yaml_data:
-        yaml_string_metadata = util.substitute_placeholders_from_memory_to_memory(records[0], verb, data)
+        yaml_string_metadata = util.substitute_placeholders_from_memory_to_memory(records[0].split("\n"), verb, data)
 
         # step 3 - convert string to yaml data structure - this will be merged
         # with the looked-up data from record 2 to build the entire secret
@@ -293,11 +293,9 @@ def do_secret_kubectl(filename, verb, data):
         # step 4 - record 2 contains the secret data to add - if we are upping
         # substitute in the real values
         if verb == constants.UP_VERB:
-            try:
-                raw = records[1]
-            except IndexError:
-                raise RuntimeError(f"missing ")
-            yaml_string_secret = util.substitute_placeholders_from_memory_to_memory(raw, verb, data)
+            # substitute function expects list of strings...
+            yaml_string_secret = util.substitute_placeholders_from_memory_to_memory(records[1].split("\n"), verb, data)
+            logger.debug(f"raw secret data after placeholder substitution: {yaml_string_secret}")
             yaml_data_secret = yaml.safe_load(yaml_string_secret)
 
             # parsed yaml must contain `data` key...
