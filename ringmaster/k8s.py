@@ -298,14 +298,14 @@ def do_secret_kubectl(filename, verb, data):
             except IndexError:
                 raise RuntimeError(f"missing ")
             yaml_string_secret = util.substitute_placeholders_from_memory_to_memory(raw, verb, data)
-            yaml_data_secret = yaml.safe_load_all(yaml_string_secret)
+            yaml_data_secret = yaml.safe_load(yaml_string_secret)
 
             # parsed yaml must contain `data` key...
             secret_data = yaml_data_secret.get("data")
             if secret_data:
-                # create the `data` key if needed
-                if not secret_data.get("data"):
-                    secret_data["data"] = {}
+                # create the `data` key in the overall structure if needed
+                if not yaml_data.get("data"):
+                    yaml_data["data"] = {}
 
                 # base 64 encode each field and add it to the yaml secret
                 for k, v in secret_data.items():
@@ -321,12 +321,12 @@ def do_secret_kubectl(filename, verb, data):
         # step 5 - secret completed - save it somewhere, kubectl, delete
         _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
         with open(secret_file, 'w') as outfile:
-            yaml.dump(data, outfile)
+            yaml.dump(yaml_data, outfile)
 
         logger.debug("secret_kubectl - creating secret with kubectl")
 
         # print the entire secret for debug purposes ;-)
-        logger.debug(f"secret: {data}")
+        logger.debug(f"secret: {yaml_data}")
 
         run_kubectl(verb, "-f", secret_file, data)
         os.unlink(secret_file)
