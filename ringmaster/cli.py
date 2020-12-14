@@ -2,7 +2,6 @@
 
 Usage:
   ringmaster [--debug] <dir> (up|down) [--start=<dir>]
-  ringmaster [--debug] --init --aws
   ringmaster [--debug] --run (up|down) <filename>
   ringmaster --version
 
@@ -14,10 +13,8 @@ Options:
 """
 
 from loguru import logger
-import pkg_resources
 import sys
 from docopt import docopt
-import ringmaster.aws as aws
 import ringmaster.api as api
 import ringmaster.version as version
 import ringmaster.constants as constants
@@ -49,24 +46,19 @@ def main():
     logger.debug(f"parsed arguments: ${arguments}")
     exit_status = 1
     try:
-
-        if arguments['--init']:
-            exit_status = aws.aws_init()
+        if arguments["down"]:
+            verb = constants.DOWN_VERB
+        elif arguments["up"]:
+            verb = constants.UP_VERB
         else:
-            if arguments["down"]:
-                verb = constants.DOWN_VERB
-            elif arguments["up"]:
-                verb = constants.UP_VERB
-            else:
-                raise RuntimeError("one of (up|down) is required")
+            raise RuntimeError("one of (up|down) is required")
 
-            if arguments["<dir>"]:
-                exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
-            elif arguments["--run"]:
-                exit_status = api.run(arguments['<filename>'], verb)
-            else:
-                raise RuntimeError("one of <dir> or --run expected")
-
+        if arguments["<dir>"]:
+            exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
+        elif arguments["--run"]:
+            exit_status = api.run(arguments['<filename>'], verb)
+        else:
+            raise RuntimeError("one of <dir> or --run expected")
 
     except Exception as e:
         exc_type, exc_value, exc_traceback = sys.exc_info()
