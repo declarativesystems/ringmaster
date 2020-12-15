@@ -1,0 +1,7 @@
+description: AWS EKS cluster with assorted plugins
+files:
+  aws/eks-cluster/cluster.eksctl.yaml:
+    sha1sum: 9d7ffdb7789ce98310df6567e4e38c2346564b14
+generated_at: '2020-12-15T16:29:18.573622'
+name: eks-cluster
+ringmaster_version: 0.0.2
