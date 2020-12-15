@@ -1,0 +1,60 @@
+# An example of ClusterConfig object creating Fargate profiles.
+---
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+
+metadata:
+  name: ${cluster_name}
+  region: ${aws_region}
+  version: "${kubernetes_version}"
+
+availabilityZones:
+  - ${availability_zone_a}
+  - ${availability_zone_b}
+
+iam:
+  withOIDC: true
+  serviceAccounts:
+    # aws-load-balancer
+    - metadata:
+        name: ${aws_load_balancer_controller_service_name}
+        namespace: kube-system
+      attachPolicyARNs:
+        - ${aws_iam_policy_aws_load_balancer_controller}
+    - metadata:
+        name: ${eks_external_secrets_service_name}
+        namespace: kube-system
+      attachPolicyARNs:
+        - ${aws_iam_policy_eks_external_secrets}
+    - metadata:
+        name: ${ambassador_service_name}
+        namespace: kube-system
+      attachPolicyARNs:
+        - ${aws_iam_policy_aws_load_balancer_controller}
+    - metadata:
+        name: ${external_dns_service_name}
+        namespace: kube-system
+      attachPolicyARNs:
+        - ${aws_iam_policy_external_dns}
+    - metadata:
+        name: ${certbot_service_name}
+        namespace: kube-system
+      attachPolicyARNs:
+        - ${aws_iam_policy_certbot}
+
+
+vpc:
+  cidr: 192.168.0.0/16
+  nat:
+    gateway: HighlyAvailable
+
+
+fargateProfiles:
+  - name: fp-default
+    selectors:
+      # All workloads in the "default" Kubernetes namespace will be
+      # scheduled onto Fargate:
+      - namespace: default
+      # All workloads in the "kube-system" Kubernetes namespace will be
+      # scheduled onto Fargate:
+      - namespace: kube-system
