@@ -1,6 +1,8 @@
 import os
 UP_VERB = "up"
 DOWN_VERB = "down"
+GET_VERB = "get"
+METADATA_VERB = "metadata"
 DATABAG_FILE = "databag.yaml"
 OUTPUT_DATABAG_FILE = f"output_{DATABAG_FILE}"
 
@@ -41,3 +43,8 @@ SNOWFLAKE_CLEANUP_FILENAME = "down.snowflake.sql"
 
 CFN_BASE64 = "base64"
 RFN_ENV = "env"
+METADATA_FILE = "metadata.yaml"
+METADATA_FILES_KEY = "files"
+METADATA_NAME_KEY = "name"
+METADATA_HASH_KEY = "sha1sum"
+SOURCE_KEY = "source"

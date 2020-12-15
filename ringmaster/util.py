@@ -9,6 +9,9 @@ import snakecase
 import json
 from contextlib import ExitStack
 from halo import Halo
+import hashlib
+import pathlib
+from urllib.parse import urlparse, urlunparse
 
 
 def walk(data, parent_name=None):
@@ -278,3 +281,14 @@ def string_to_snakecase(string):
 
     logger.debug(f"converted input:{string} key:{key}")
     return key
+
+
+def hash_file(filename):
+    return hashlib.sha1(pathlib.Path(filename).read_bytes()).hexdigest()
+
+
+def change_url_filename(url, filename):
+    """change the filename in the last part of url if needed, eg:
+        change_url_filename("https://blah", "something.txt") # https://blah/something.txt
+    """
+    return f"{url}/{filename}"

@@ -1,3 +1,5 @@
+from datetime import datetime
+from urllib.parse import urlparse, urlunparse
 import importlib
 import requests
 import os
@@ -9,13 +11,22 @@ import tempfile
 from loguru import logger
 from ringmaster import constants as constants
 import ringmaster.solarwinds_papertrail as solarwinds_papertrail
-from .util import run_cmd
+
 import ringmaster.k8s as k8s
 import ringmaster.aws as aws
 import ringmaster.snowflake as snowflake
+from pathlib import Path
+import ringmaster.version as version
+import ringmaster.util as util
 
 debug = False
 
+metadata = {
+    "ringmaster_version": version.version,
+    "generated_at": datetime.now().isoformat(),
+    "description": "edit me",
+    constants.METADATA_FILES_KEY: {},
+}
 
 def load_databag(databag_file):
     # users write values as JSON to this file and they are added to the
@@ -66,7 +77,7 @@ def do_bash_script(filename, verb, data):
     # bash scripts
     logger.info(f"bash script: {filename}")
     logger.info(f"write JSON to file at ${constants.KEY_INTERMEDIATE_DATABAG} to add to databag")
-    run_cmd(f"bash {filename} {verb}", data)
+    util.run_cmd(f"bash {filename} {verb}", data)
 
     load_intermediate_databag(data)
 
@@ -120,15 +131,25 @@ def get_handler_for_file(filename):
     return handler
 
 
+
 def do_file(filename, verb, data):
     handler = get_handler_for_file(filename)
-    if handler:
+    if handler and verb == constants.METADATA_VERB:
+        metadata[constants.METADATA_FILES_KEY][os.path.basename(filename)] = {
+            constants.METADATA_HASH_KEY: util.hash_file(filename)
+        }
+    elif handler:
         handler(filename, verb, data)
     else:
         logger.debug(f"no handler for {filename} - skipped")
 
 
 def do_stage(data, stage, verb):
+    """process the children of an 'inner' dir in order, eg:
+    stacks/
+        0010 <--- this level
+            somefile.yaml
+    """
     for root, dirs, files in os.walk(stage, topdown=True, followlinks=True):
         # modify dirs in-place to exclude dirs to skip and all their children
         # https://stackoverflow.com/a/19859907/3441106
@@ -140,7 +161,8 @@ def do_stage(data, stage, verb):
             filename = os.path.join(root, file)
             do_file(filename, verb, data)
 
-        save_output_databag(data)
+        if verb != constants.METADATA_VERB:
+            save_output_databag(data)
 
 
 def run(filename, verb):
@@ -168,7 +190,11 @@ def save_output_databag(data):
 
 
 def run_dir(working_dir, start, verb):
-
+    """process an 'outer' dir and all its children in order, eg:
+    stacks/ <--- this level
+        0010
+            somefile.yaml
+    """
     if os.path.exists(working_dir):
         logger.debug(f"found: {working_dir}")
         started = False
@@ -211,3 +237,76 @@ def run_dir(working_dir, start, verb):
 
     else:
         logger.error(f"missing directory: {working_dir}")
+
+
+def check_ok_to_update(local_metadata_file, remote_url):
+    safe = True
+    working_dir = os.path.dirname(local_metadata_file)
+    if os.path.exists(local_metadata_file):
+        logger.debug(f"loading metadata:{local_metadata_file}")
+        with open(local_metadata_file) as f:
+            local_metadata = yaml.safe_load(f)
+            logger.debug(f"metadata loaded:{local_metadata}")
+        local_url = local_metadata.get(constants.SOURCE_KEY)
+        if local_url == remote_url:
+            for filename, file_metadata in local_metadata.get(constants.METADATA_FILES_KEY, {}).items():
+                local_filename = os.path.join(working_dir, filename)
+                if os.path.exists(local_filename) and \
+                        util.hash_file(local_filename) != file_metadata[constants.METADATA_HASH_KEY]:
+                    logger.error(f"file:{local_filename} MODIFIED - aborting. Delete and retry to overwrite")
+                    safe = False
+        else:
+            logger.error(f"file:{local_metadata_file} source:{local_url} does not match requested:{remote_url} - aborting. Try saving to another directory")
+            safe = False
+    return safe
+
+
+def download_metadata_yaml(url):
+    # append METADATA_FILE to the end of path if missing...
+    metadata_url = util.change_url_filename(url, constants.METADATA_FILE)
+    return yaml.safe_load(requests.get(metadata_url).text)
+
+
+def download_files_from_metadata(directory, new_metadata, base_url):
+    """ download each file listed in new_metadata['files'] to `directory` """
+    for filename, file_metadata in new_metadata.get(constants.METADATA_FILES_KEY, {}).items():
+        local_file = os.path.join(directory, filename)
+        remote_url = util.change_url_filename(base_url, filename)
+
+        logger.info(f"downloading {remote_url} ==> {local_file}")
+        downloaded_file = requests.get(remote_url)
+        with open(local_file, "wb") as f:
+            f.write(downloaded_file.content)
+
+        if not util.hash_file(local_file) == new_metadata[constants.METADATA_FILES_KEY][filename][constants.METADATA_HASH_KEY]:
+            raise RuntimeError(f"local hash != remote hash file:{filename}")
+
+
+def get(directory, url):
+    """download <url> to <dir> - somewhat inspired by go get"""
+    if not os.path.exists(directory):
+        Path(directory).mkdir(parents=True, exist_ok=True)
+
+    local_metadata_file = os.path.join(directory, constants.METADATA_FILE)
+    if check_ok_to_update(local_metadata_file, url):
+        new_metadata = download_metadata_yaml(url)
+        download_files_from_metadata(directory, new_metadata, url)
+
+        # save the metadata file and add the source we downloaded from
+        new_metadata[constants.SOURCE_KEY] = url
+        with open(local_metadata_file, "w") as f:
+            yaml.dump(new_metadata, f)
+
+
+def write_metadata(directory):
+    metadata_file = os.path.join(directory, constants.METADATA_FILE)
+    name = os.path.basename(os.path.abspath(directory))
+    metadata[constants.METADATA_NAME_KEY] = name
+    logger.info(f"Collecting metadata for {directory} to {metadata_file}")
+    if os.path.isdir(directory):
+        do_stage({}, directory, constants.METADATA_VERB)
+    else:
+        raise RuntimeError(f"No such directory: {directory}")
+
+    with open(metadata_file, "w") as f:
+        yaml.dump(metadata, f)

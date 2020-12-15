@@ -2,7 +2,9 @@
 
 Usage:
   ringmaster [--debug] <dir> (up|down) [--start=<dir>]
-  ringmaster [--debug] --run (up|down) <filename>
+  ringmaster [--debug] get <dir> <url>
+  ringmaster [--debug] metadata <dir>
+  ringmaster [--debug] --run <filename> (up|down)
   ringmaster --version
 
 Options:
@@ -50,10 +52,18 @@ def main():
             verb = constants.DOWN_VERB
         elif arguments["up"]:
             verb = constants.UP_VERB
+        elif arguments["get"]:
+            verb = constants.GET_VERB
+        elif arguments["metadata"]:
+            verb = constants.METADATA_VERB
         else:
-            raise RuntimeError("one of (up|down) is required")
+            raise RuntimeError("one of (up|down|get) is required")
 
-        if arguments["<dir>"]:
+        if arguments["get"]:
+            api.get(arguments["<dir>"], arguments["<url>"])
+        elif arguments["metadata"]:
+            api.write_metadata(arguments["<dir>"])
+        elif arguments["<dir>"]:
             exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
         elif arguments["--run"]:
             exit_status = api.run(arguments['<filename>'], verb)

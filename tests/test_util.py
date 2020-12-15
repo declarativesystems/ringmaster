@@ -120,3 +120,10 @@ def test_substitute_placeholders_line():
     }
     subst = "some${avalue}"
     assert "something" == util.substitute_placeholders_line(subst, data)
+
+def test_change_url_filename():
+    assert "https://github.com/declarativesystems/ringmaster/tree/master/examples/aws/eks-cluster/metadata.yaml" \
+        == util.change_url_filename(
+            "https://github.com/declarativesystems/ringmaster/tree/master/examples/aws/eks-cluster",
+            "metadata.yaml",
+        )
