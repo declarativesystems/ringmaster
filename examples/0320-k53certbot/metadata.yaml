@@ -3,7 +3,7 @@ files:
   0-zerossl.secret_kubectl.yaml:
     sha1sum: 154b4b21572307e3efa9fb8c88e97fa6262539ac
   k53certbot.kubectl.yaml:
-    sha1sum: bd5aac5e1eee3d5a4fdccb35a5894cb46e0db01d
-generated_at: '2020-12-17T15:46:04.902888'
+    sha1sum: 4577eb5244a34353c5265dbcccc9510f421c07d7
+generated_at: '2020-12-17T16:22:55.428849'
 name: 0320-k53certbot
 ringmaster_version: 0.0.2

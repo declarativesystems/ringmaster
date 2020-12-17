@@ -76,9 +76,6 @@ spec:
         - name: persistent-storage
           persistentVolumeClaim:
             claimName: efs-claim-kube-system-ns
-
-      imagePullSecrets:
-        - name: secret-artifactory-docker
       securityContext:
         fsGroup: 65534 # For ExternalDNS to be able to read Kubernetes and AWS token files
 
