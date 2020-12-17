@@ -2,10 +2,3 @@ rkubelog:
   git_repo: "https://github.com/solarwinds/rkubelog"
 
 
-secret:
-  PAPERTRAIL_PROTOCOL: "tls"
-  PAPERTRAIL_HOST: "logs.papertrailapp.com"
-  PAPERTRAIL_PORT: "${solarwinds_papertrail_port}"
-  # this is from the docs...
-  LOGGLY_TOKEN: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
-

@@ -298,13 +298,28 @@ def get(directory, url):
             yaml.dump(new_metadata, f)
 
 
-def write_metadata(directory):
+def include_extra_file(directory, extra_file):
+    extra_file_path = os.path.join(directory, extra_file)
+    if os.path.exists(extra_file_path):
+        metadata[constants.METADATA_FILES_KEY][extra_file] = {
+            constants.METADATA_HASH_KEY: util.hash_file(extra_file_path)
+        }
+    else:
+        raise RuntimeError(f"Requested --include {extra_file_path} not found")
+
+
+def write_metadata(directory, includes):
+    extra_files = includes.split(",") if includes else []
     metadata_file = os.path.join(directory, constants.METADATA_FILE)
     name = os.path.basename(os.path.abspath(directory))
     metadata[constants.METADATA_NAME_KEY] = name
-    logger.info(f"Collecting metadata for {directory} to {metadata_file}")
+    logger.info(f"Collecting metadata for {directory} to {metadata_file} (--includes:{extra_files})")
     if os.path.isdir(directory):
         do_stage({}, directory, constants.METADATA_VERB)
+
+        # now add any extra includes
+        for extra_file in extra_files:
+            include_extra_file(directory, extra_file)
     else:
         raise RuntimeError(f"No such directory: {directory}")
 

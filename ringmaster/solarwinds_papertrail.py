@@ -11,8 +11,6 @@ from ringmaster import constants as constants
 # https://documentation.solarwinds.com/en/Success_Center/papertrail/Content/kb/configuration/rkubelog.htm?cshid=ptm-rkubelog
 
 
-
-
 def copy_files_from_git(git_repo, dest_dir):
     if os.path.exists(dest_dir):
         logger.info(f"papertrail kustomization files already exist at {dest_dir}")
@@ -31,6 +29,9 @@ def copy_files_from_git(git_repo, dest_dir):
 
 
 def do_papertrail(filename, verb, data):
+    # fixme - this should just be a generic way of downloading krazy
+    # komplicated kustomizer files from git...
+
     logger.info(f"solarwinds papertrail: {filename}")
     # download to relative path within this step:
     # stack/up/.../
@@ -50,23 +51,11 @@ def do_papertrail(filename, verb, data):
     except KeyError:
         raise RuntimeError(f"missing yaml value for `rkubelog:git_repo` in  {filename}")
 
-    try:
-        # grab the secret from the hash and make sure all required keys
-        # present
-        secret = config['secret']
-        _ = config['secret']["PAPERTRAIL_PROTOCOL"]
-        _ = config['secret']["PAPERTRAIL_HOST"]
-        _ = config['secret']["PAPERTRAIL_PORT"]
-        _ = config['secret']["LOGGLY_TOKEN"]
-    except KeyError as e:
-        raise RuntimeError(f"solarwinds papertrail - missing yaml key:{e} file:{filename}")
-
     # defined in rkubelog source code - see link at top of this file
     if verb == constants.UP_VERB:
-        k8s.register_k8s_secret("kube-system", "logging-secret", secret)
         copy_files_from_git(git_repo, download_dir)
     elif verb == constants.DOWN_VERB:
-        k8s.delete_k8s_secret("kube-system", "logging-secret")
+        pass
     else:
         raise RuntimeError(f"solarwinds papertrail - invalid verb:{verb}")
 

@@ -89,39 +89,6 @@ def run_kubectl(verb, flag, path, data):
     else:
         raise RuntimeError("kubectl not logged in - context is not set")
 
-def delete_k8s_secret(secret_namespace, secret_name):
-    try:
-        run_cmd(["kubectl", "delete", "secret", "-n", secret_namespace, secret_name])
-    except RuntimeError as e:
-        logger.error(f"delete k8s secret failed - moving on: {e}")
-
-
-def register_k8s_secret(secret_namespace, secret_name, data):
-    logger.debug(f"registering k8s secret:{secret_name}")
-    secret_data = {
-        "apiVersion": "v1",
-        "kind": "Secret",
-        "metadata": {
-            "namespace": secret_namespace,
-            "name": secret_name,
-        },
-        "data": {}
-    }
-
-    # each member of data needs to have its value base64 encoded
-    for k, v in data.items():
-        secret_data["data"][k] = util.base64encode(v)
-
-    # secret completed - save it somewhere, kubectl, delete
-    _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
-    with open(secret_file, 'w') as outfile:
-        yaml.dump(secret_data, outfile)
-
-    logger.debug("creating secret with kubectl")
-
-    run_kubectl(constants.UP_VERB, "-f", secret_file, data)
-    os.unlink(secret_file)
-
 
 def do_kubectl(filename, verb, data=None):
     # substitute ${...} variables from databag, bomb out if any missing

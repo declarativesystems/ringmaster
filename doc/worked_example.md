@@ -1,4 +1,4 @@
-# Workflow
+# Worked Example
 
 _Zero to hero_
 
@@ -90,9 +90,80 @@ stack/
 
 ```
 
+## 2. Databag
 
-## 2. Create infrastructure
+The scripts will lookup values from `databag.yaml` so create these file and add
+the expected values - adjust as needed:
+
+```yaml
+cluster_name: mycluster
+aws_region: us-east-1
+
+aws_account_id: 111122223333
+aws_load_balancer_controller_service_name: aws-load-balancer-controller
+eks_external_secrets_service_name: external-secrets-kubernetes-external-secrets
+ambassador_service_name: ambassador-service
+cert_manager_service_name: cert-manager
+external_dns_service_name: external-dns
+certbot_service_name: certbot-service
+
+# fixme - how to have a single list? (any ideas dear reader)
+# ekcsctl uses individual zones...
+availability_zone_a: us-east-1a
+availability_zone_b: us-east-1b
+# cloudformation needs a string...
+availability_zones: us-east-1a,us-east-1b
+
+# ran out of EIPs...
+create_nat_gateways: "false"
+dns_zone: your.domain.com
+kubernetes_version: "1.18"
+
+# private docker repository - eg artifactory
+docker_server: yourserver.jfrog.io
+docker_username: admin
+docker_email: your@email.com
+certbot_admin_email: your@email.com
+eks_cluster_admin_arn: arn:aws:iam::111122223333:user/some.user
+```
+
+
+## 3. export secret values
+
+The scripts are expecting some secret values exported from your environment:
+
+**0130-docker-secret/docker.default.secret_kubectl.yaml**
+
+```shell
+export docker_password=YOURDOCKERPASSWORD
+```
+
+**0320-k53certbot/0-zerossl.secret_kubectl.yaml**
+
+```shell
+export zerossl_api_key=YOURAPIKEY
+```
+
+## 4. Create infrastructure
 
 ```shell
 ringmaster --debug stack up
 ```
+
+_Relax while your stack is created_
+
+```
+                 .--.   ( ZZZZZZZZZZZZZZZZZZZZ! )
+    ----------__/  u\u  /'-------------------------------------------
+      `-'`-'  \ |(   C|
+               \ \_  -'--.       `-'`-'`-'
+                \|   . "-.\                      `-'`-'`-'
+     `-'`-'`-'   \\ \______\\___
+    --------------\\_____\)'--.-)----------------------------------
+                /  \ / (  |    \ \
+     VK        /    \__.`-|--\  \ \
+              /__.--'     |   `. \__--.
+             '            |     )___\--`
+```
+
+_Probably dont relax too hard at the moment, this is concept-level software ATM ;-)_

@@ -2,6 +2,8 @@ description: edit me
 files:
   helm_deploy.yaml:
     sha1sum: 2727dd45ad1c5e230c615db80690a424be77d055
-generated_at: '2020-12-17T15:46:02.035280'
+  values.yaml:
+    sha1sum: 8c73d3e6eaa83807852ab9ce305b966007ebb246
+generated_at: '2020-12-17T17:18:47.673861'
 name: 0340-ambassador
 ringmaster_version: 0.0.2

@@ -22,13 +22,62 @@ command.
 
 Ringmaster helps you create and share your automation scripts with others so
 you can get up and running as quick as possible. There are no agents, hubs, 
-gits or daemons. Just files on a disk and calls to other systems.
+gits or daemons. 
 
-## Quickstart
+There is also no custom DSL or new programming language to learn, although
+there is a simple templating system.
 
-### 1. Setup
+Ringmaster is just files on a disk and calls to other systems.
 
+## How does it work?
 
+You create a directory of scripts to process, like this:
+
+```
+stack/
+├── 0010-iam
+│     ├── AWSLoadBalancerController.iam_policy.json
+│     ├── Certbot.iam_policy.json
+│     ├── EksDeploy.iam_policy.json
+│     ├── EksExternalSecrets.iam_policy.json
+│     ├── ExternalDns.iam_policy.json
+│     └── metadata.yaml
+├── 0020-efs
+│     ├── efs.cloudformation.yaml
+│     └── metadata.yaml
+├── 0030-vpc
+│     ├── metadata.yaml
+│     ├── vpc.remote_cloudformation.yaml
+│     └── vpc.yaml
+...
+```
+
+Then you tell ringmaster to process the scripts, like this:
+
+`ringmaster stack up`
+
+Ringmaster will carry out the create action of each script, running each 
+script in alphabetical order by directory and then file
+
+`ringmaster stack down`
+
+Ringmaster will carry out the delete action of each script, in reverse
+alphabetical order
+
+**The `up` and `down` actions are idempotent so you can run them as many times
+as you like**
+
+## Workstation Setup
+
+Install and configure:
+* AWS CLI v2 with IAM admin rights on your AWS account
+* eksctl
+* kubectl
+* helm v3
+* Python 3 + pip
+
+**You must use EKS compatible versions:** 
+https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html 
 
 
 ### 2. Create (VPC) and cluster
@@ -50,7 +99,8 @@ ringmaster stack up
 
 1. [Concepts](doc/concepts.md)
 2. [Authentication](doc/authentication.md)
-2. [Handlers](doc/handlers.md)
+3. [Handlers](doc/handlers.md)
+4. [Worked Example](doc/worked_example.md)
 
 
 

@@ -1,16 +1,22 @@
 # Ringmaster Handlers
 
+Each file in your stack directory is processed by a different handler. Handlers
+are just Python functions that are executed when a filename matches the handler
+pattern.
+
+Ringmaster supports these handlers:
+
 ## *.sh
 
-* normal bash scripts
-* each variable in databag exposed as environment variables
-* put values in databag by writing JSON to `$intermediate_databag_file`
+* Normal bash scripts
+* Each variable in databag exposed as environment variables
+* Put values in databag by writing JSON to `$intermediate_databag_file`
 
 ## *.cloudformation.yaml
 
-* normal cloudformation in yaml format
-* parameters are converted to snake_case and looked up from databag
-* outputs are converted to snake_case and added to databag
+* Normal cloudformation in yaml format
+* Parameters are converted to snake_case and looked up from databag
+* Outputs are converted to snake_case and added to databag
 
 ## *.remote_cloudformation.yaml
 
@@ -22,23 +28,23 @@
 
 ## *.kubectl.yaml
 
-* databag variables are available and can be inserted as ${variable_name}
-* ringmaster pre-process the file to substitute variables and saves the
+* Databag variables are available and can be inserted as ${variable_name}
+* Ringmaster pre-process the file to substitute variables and saves the
   output as `*.kubectl.processed.yaml`
 * `*.kubectl.processed.yaml` files are just normal kubectl files
 
 ## solarwinds_papertrail.yaml
 
-* single purpose file to configure solarwinds papertrail at cluster level
-* ringmaster will perform the entire installation
+* Single purpose file to configure solarwinds papertrail at cluster level
+* Ringmaster will perform the entire installation
 * `kustomization` files will be saved to in a directory `download` within the 
   current step 
 
 ## kustomization.yaml
 
-* processed with `kubectl (apply|delete) -k`
-* not changed by ringmaster in any way
-* be sure to also download any required files
+* Processed with `kubectl (apply|delete) -k`
+* Not changed by ringmaster in any way
+* Be sure to also download any required files
 
 ## *.ringmaster.py
 

@@ -3,15 +3,16 @@
 Usage:
   ringmaster [--debug] <dir> (up|down) [--start=<dir>]
   ringmaster [--debug] get <dir> <url>
-  ringmaster [--debug] metadata <dir>
+  ringmaster [--debug] metadata <dir> [--include=<files>]
   ringmaster [--debug] --run <filename> (up|down)
   ringmaster --version
 
 Options:
-  -h --help     Show this screen.
-  --version     Show version.
-  --debug       Extra debugging messages
-  --start=<dir_num>  up: start here and count up, down: start here and count down
+  -h --help         Show this screen.
+  --version         Show version.
+  --debug           Extra debugging messages
+  --start=<dir_num> up: start here count up, down: start here count down
+  --include=<files> comma delimited list of extra files to add to metadata
 """
 
 from loguru import logger
@@ -46,7 +47,7 @@ def main():
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")
-    exit_status = 1
+
     try:
         if arguments["down"]:
             verb = constants.DOWN_VERB
@@ -62,7 +63,7 @@ def main():
         if arguments["get"]:
             api.get(arguments["<dir>"], arguments["<url>"])
         elif arguments["metadata"]:
-            api.write_metadata(arguments["<dir>"])
+            api.write_metadata(arguments["<dir>"], arguments.get("--include", []))
         elif arguments["<dir>"]:
             exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
         elif arguments["--run"]:
@@ -76,4 +77,3 @@ def main():
         if arguments['--debug']:
             logger.exception(e)
 
-    sys.exit(exit_status)
