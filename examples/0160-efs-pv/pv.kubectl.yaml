@@ -1,0 +1,35 @@
+# warning: namespaces do not apply here
+
+# fixme must delete the claim FIRST if changes needed
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-pv-default-ns
+spec:
+  capacity:
+    storage: 1Ti
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${efs_efs}::${efs_access_point}
+---
+# fixme must delete the claim FIRST if changes needed
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: efs-pv-kube-system-ns
+spec:
+  capacity:
+    storage: 1Ti
+  volumeMode: Filesystem
+  accessModes:
+    - ReadWriteMany
+  persistentVolumeReclaimPolicy: Delete
+  storageClassName: efs-sc
+  csi:
+    driver: efs.csi.aws.com
+    volumeHandle: ${efs_efs}::${efs_access_point}

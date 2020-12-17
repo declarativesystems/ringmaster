@@ -1,0 +1,54 @@
+# allow k8s VPC ingress access to our infra-vpc to access RDS etc
+
+Parameters:
+  ResourcesvpcconfigVpcid:
+    Type: String
+  VpcVpcid:
+    Type: String
+  ClusterVpcCidr:
+    Type: String
+  VpcVpccidr:
+    Type: String
+  ClusterPrivateRouteTable1:
+    Type: String
+  ClusterPrivateRouteTable2:
+    Type: String
+  VpcPrivateSubnet1ARouteTable:
+    Type: String
+  VpcPrivateSubnet2ARouteTable:
+    Type: String
+
+Resources:
+  VPCPeeringConnection:
+    Type: AWS::EC2::VPCPeeringConnection
+    Properties:
+      PeerVpcId: !Ref ResourcesvpcconfigVpcid
+      VpcId: !Ref VpcVpcid
+
+  VpcToEksRoute1A:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VpcPrivateSubnet1ARouteTable
+      DestinationCidrBlock: !Ref ClusterVpcCidr
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  VpcToEksRoute2A:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref VpcPrivateSubnet2ARouteTable
+      DestinationCidrBlock: !Ref ClusterVpcCidr
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  EksToVpcRoute1A:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ClusterPrivateRouteTable1
+      DestinationCidrBlock: !Ref VpcVpccidr
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection
+
+  EksToVpcRoute2A:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref ClusterPrivateRouteTable2
+      DestinationCidrBlock: !Ref VpcVpccidr
+      VpcPeeringConnectionId: !Ref VPCPeeringConnection

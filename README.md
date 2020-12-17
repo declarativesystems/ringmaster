@@ -14,15 +14,22 @@
    `._ \    / _.'MJP
       ``|/\|-'
 ```
+
+Ringmaster organises a bunch of other tools on your behalf so that you dont
+have to. The aim is you can create, updated and delete entire stacks crossing
+cloudformation, EKS, kubectl, helm and random Python/BASH scripts with a single
+command.
+
+Ringmaster helps you create and share your automation scripts with others so
+you can get up and running as quick as possible. There are no agents, hubs, 
+gits or daemons. Just files on a disk and calls to other systems.
+
 ## Quickstart
 
 ### 1. Setup
 
-```shell
-# ringmaster init --aws
-```
 
-Grab a bunch of cloudformation scripts off amazon 
+
 
 ### 2. Create (VPC) and cluster
 
@@ -30,37 +37,23 @@ Grab a bunch of cloudformation scripts off amazon
 ringmaster stack up
 ```
 
+## Setup
+* AWS CLI
+* eksctl
+* kubectl
+* helm
+* Python 3 + pip
+
+
 
 ## Reference
 
-### Concepts
+1. [Concepts](doc/concepts.md)
+2. [Authentication](doc/authentication.md)
+2. [Handlers](doc/handlers.md)
 
-#### Databag
 
-The databag is a key-value store (`dict`) that is loaded with values from 
-`databag.yaml` initially and then accumulates other values of interest as the
-stack is built. It is serialised to `output_databag.yaml` as a run completes.
 
-The contents of the databag are made available as each step is processed. This
-lets us do things like lookup EKS details such as public/private subnet IDs and
-use the values directly in later steps.
-
-#### AWS Authentication
-This is handled directly by the 
-[Boto3 API](https://aws.amazon.com/sdk-for-python/) which uses the files in 
-`~/.aws` to configure credentials.
-
-The default _profile_ will be used automatically, use the `AWS_PROFILE` 
-environment variable to use a different one:
-
-```
-AWS_PROFILE="someprofile" ringmaster ...
-```
-
-All work is done inside a single region which is controlled by databag value:
-```
-aws_region: "us-east-1" # eg
-```
 
  
 
@@ -108,80 +101,3 @@ aws_region: "us-east-1" # eg
 ```
 
 
-### filetypes
-
-#### *.sh
-* normal bash scripts
-* each variable in databag exposed as environment variables
-* put values in databag by writing JSON to `$intermediate_databag_file`
-
-#### *.cloudformation.yaml
-* normal cloudformation in yaml format
-* parameters are converted to snake_case and looked up from databag
-* outputs are converted to snake_case and added to databag
-
-#### *.remote_cloudformation.yaml
-* Remotely hosted cloudformation scripts to get around 51200 byte upload
-  hard limit
-* Handled the same as local cloudformation scripts
-* A copy of the remote file will be downloaded for your own records and
-  for parameter pre-processing
-
-#### *.kubectl.yaml
-* databag variables are available and can be inserted as ${variable_name}
-* ringmaster pre-process the file to substitute variables and saves the
-  output as `*.kubectl.processed.yaml`
-* `*.kubectl.processed.yaml` files are just normal kubectl files
-
-#### solarwinds_papertrail.yaml
-* single purpose file to configure solarwinds papertrail at cluster level
-* ringmaster will perform the entire installation
-* `kustomization` files will be saved to in a directory `download` within the 
-  current step 
-
-#### kustomization.yaml
-* processed with `kubectl (apply|delete) -k`
-* not changed by ringmaster in any way
-* be sure to also download any required files
-
-#### *.ringpaster.py
-* Rudimentary plugin system
-* Normal python scripts
-* Top level variable `databag` will be set with the current databag
-* To make new data available to other stages, just add it to `databag`
-* Execution:
-    1. set `databag`
-    2. call `main()` 
-
-#### get_eks_cluster_info
-* Empty file
-* Tells ringmaster to lookup eks cluster info and add it to databag:
-    * `cluster_vpc_cidr`
-    * `cluster_private_subnets`
-    * `cluster_private_subnet_{n}`
-    * `cluster_public_subnets`
-    * `cluster_public_subnet_{n}`
-
-#### *.snowflake.sql
-* Bunch of SQL commands to run against snowflake
-* Configure snowflake credentials at `~/.ringmaster/snowflake.yaml`
-* Placeholders will be substituted and the result saved to 
-  `file.snowflake.processed.sql`
-* Each line **must** end with `;`
-* Lines starting `--` will be discarded
-* One statement per line, but long statements can be split over multiple lines
-
-# *.snowflake_query.sql
-* ONE sql command to run which must be a `SELECT` statement
-* Configure snowflake credentials at `~/.ringmaster/snowflake.yaml`
-* Placeholders will be substituted and the result saved to 
-  `file.snowflake_query.processed.sql`
-* Entire processed file will be executed as-is
-* Columns in the results will be added to databag using the column name. Use 
-  SQL `AS` to set databag name, eg:
-  `SELECT  x AS the_name_for_databag`
-
-#### helm_deploy.yaml
-* Requires internet access - for repeatable deployments artifactory integration
-  or similar required
-* Install helm repo and deploy directly

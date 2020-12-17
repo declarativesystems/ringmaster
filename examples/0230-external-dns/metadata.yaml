@@ -1,0 +1,7 @@
+description: edit me
+files:
+  externaldns.kubectl.yaml:
+    sha1sum: 70cd806ea8776f7afac098756da19094e223b79d
+generated_at: '2020-12-16T10:15:27.653332'
+name: external-dns
+ringmaster_version: 0.0.2

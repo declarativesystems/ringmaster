@@ -1,0 +1,17 @@
+repos:
+  external-secrets: https://external-secrets.github.io/kubernetes-external-secrets/
+
+name: external-secrets
+install: external-secrets/kubernetes-external-secrets
+namespace: kube-system
+set:
+  - clusterName=${cluster_name}
+  - serviceAccount.create=false
+  - serviceAccount.name=external-secrets-kubernetes-external-secrets
+  - env.AWS_REGION=${aws_region}
+  - env.AWS_DEFAULT_REGION=${aws_region}
+  - env.LOG_LEVEL=debug
+  - securityContext.fsGroup=65534
+  - serviceAccount.annotations\.eks\.amazonaws\.com/role-arn=${aws_iam_policy_eks_external_secrets}
+options:
+  - "--skip-crds"

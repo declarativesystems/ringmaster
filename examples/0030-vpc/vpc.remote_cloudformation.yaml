@@ -1,0 +1,3 @@
+# https://docs.aws.amazon.com/quickstart/latest/vpc/step2.html
+remote: https://aws-quickstart.s3.amazonaws.com/quickstart-aws-vpc/templates/aws-vpc.template.yaml
+local_file: vpc.yaml

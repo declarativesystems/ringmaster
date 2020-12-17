@@ -1,0 +1,84 @@
+## from https://github.com/kubernetes-sigs/external-dns/blob/master/docs/tutorials/aws.md
+
+# Rights on Kubernetes API
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  namespace: kube-system
+  name: k53certbot
+rules:
+  - apiGroups: [""]
+    resources: ["services","endpoints","pods"]
+    verbs: ["get","watch","list"]
+  - apiGroups: ["extensions","networking.k8s.io"]
+    resources: ["ingresses"]
+    verbs: ["get","watch","list"]
+  - apiGroups: [""]
+    resources: ["nodes"]
+    verbs: ["list","watch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get","delete", "create"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  namespace: kube-system
+  name: k53certbot
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: k53certbot
+subjects:
+  - kind: ServiceAccount
+    name: certbot-service
+    namespace:  kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  namespace: kube-system
+  name: k53certbot
+spec:
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: k53certbot
+  template:
+    metadata:
+      labels:
+        app: k53certbot
+    spec:
+      serviceAccountName: certbot-service
+      containers:
+        - name: k53certbot
+          image: quay.io/declarativesystems/k53certbot:0.1.0-1d1ec6b
+          env:
+            - name: ZEROSSL_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: zerossl
+                  key: zerossl_api_key
+            - name: CERTBOT_ADMIN_EMAIL
+              value: ${certbot_admin_email}
+          command:
+            - k53certbot
+          args:
+            - --debug
+            - --provider
+            - zerossl
+          volumeMounts:
+            - name: persistent-storage
+              mountPath: /etc/letsencrypt
+      volumes:
+        - name: persistent-storage
+          persistentVolumeClaim:
+            claimName: efs-claim-kube-system-ns
+
+      imagePullSecrets:
+        - name: secret-artifactory-docker
+      securityContext:
+        fsGroup: 65534 # For ExternalDNS to be able to read Kubernetes and AWS token files
+

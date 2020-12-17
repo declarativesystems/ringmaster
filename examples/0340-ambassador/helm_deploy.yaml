@@ -1,0 +1,6 @@
+# https://www.getambassador.io/docs/latest/topics/install/install-ambassador-oss/
+repos:
+  datawire: https://www.getambassador.io
+name: ambassador
+install: datawire/ambassador
+namespace: kube-system
