@@ -11,6 +11,8 @@ Ringmaster supports these handlers:
 * Normal bash scripts
 * Each variable in databag exposed as environment variables
 * Put values in databag by writing JSON to `$intermediate_databag_file`
+* script will be run with `$1 == $up_verb` if stack is creating or 
+  `$1 == $down_verb` if stack is being destroyed  
 
 ## *.cloudformation.yaml
 
@@ -54,7 +56,8 @@ Ringmaster supports these handlers:
 * To make new data available to other stages, just add it to `databag`
 * Ringmaster runs your script like this:
     1. set `databag`
-    2. call `main()` 
+    2. call `main()` with argument `verb` which indicates whether we are 
+       creating or destroying
 
 ## *.snowflake.sql
 

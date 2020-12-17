@@ -2,6 +2,6 @@ description: edit me
 files:
   vpc.remote_cloudformation.yaml:
     sha1sum: 9ab1ac74a43adef95676c2338a98f150ab16847d
-generated_at: '2020-12-17T17:18:31.477109'
+generated_at: '2020-12-18T17:18:26.976867'
 name: 0030-vpc
 ringmaster_version: 0.0.2

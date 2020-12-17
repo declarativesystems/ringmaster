@@ -6,6 +6,6 @@ files:
     sha1sum: 3f85643f39bad45ab8588b0dfd6c17f9cac03cf3
   kustomization.yaml:
     sha1sum: 5fb41421f43ea7fbe38e23b5d8e8c6d2aadcbe8d
-generated_at: '2020-12-17T17:18:46.737019'
-name: 0330-aws-load-balancer
+generated_at: '2020-12-18T17:18:42.469658'
+name: 0250-aws-load-balancer
 ringmaster_version: 0.0.2

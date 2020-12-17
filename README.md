@@ -1,4 +1,4 @@
-# ringmaster
+# Ringmaster
 ```
          _
        _[_]_
@@ -15,19 +15,20 @@
       ``|/\|-'
 ```
 
-Ringmaster organises a bunch of other tools on your behalf so that you dont
+Ringmaster organises a bunch of other tools on your behalf so that you don't
 have to. The aim is you can create, updated and delete entire stacks crossing
 cloudformation, EKS, kubectl, helm and random Python/BASH scripts with a single
 command.
 
-Ringmaster helps you create and share your automation scripts with others so
+Ringmaster helps you create and share your automation scripts with others, so
 you can get up and running as quick as possible. There are no agents, hubs, 
-gits or daemons. 
+gits or daemons - unless you add them yourself. 
 
 There is also no custom DSL or new programming language to learn, although
 there is a simple templating system.
 
-Ringmaster is just files on a disk and calls to other systems.
+Ringmaster is just files on a disk and calls to other systems made in an order
+you decide.
 
 ## How does it work?
 
@@ -52,102 +53,52 @@ stack/
 ...
 ```
 
-Then you tell ringmaster to process the scripts, like this:
+Then you run `ringmaster` like this:
 
 `ringmaster stack up`
 
-Ringmaster will carry out the create action of each script, running each 
-script in alphabetical order by directory and then file
+Ringmaster will carry out the _create_ action of each script, running each 
+script in alphabetical order by _directory_ and then _file_
 
 `ringmaster stack down`
 
-Ringmaster will carry out the delete action of each script, in reverse
+Ringmaster will carry out the delete action of each script, in _reverse_
 alphabetical order
 
-**The `up` and `down` actions are idempotent so you can run them as many times
-as you like**
-
-## Workstation Setup
-
-Install and configure:
-* AWS CLI v2 with IAM admin rights on your AWS account
-* eksctl
-* kubectl
-* helm v3
-* Python 3 + pip
-
-**You must use EKS compatible versions:** 
-https://docs.aws.amazon.com/eks/latest/userguide/getting-started-eksctl.html 
+**The `up` and `down` actions are 
+[idempotent](https://en.wikipedia.org/wiki/Idempotence#Computer_science_examples)
+so you can run them as many times as you like**
 
 
-### 2. Create (VPC) and cluster
+## What's in the scripts? do I have to learn a new language?
 
-```shell
-ringmaster stack up
+No! The scripts use the languages and tools you already know and love, eg:
+
+* Cloudformation
+* Bash
+* Python
+* Kubernetes deployment descriptors
+* ...etc
+
+Ringmaster uses a [databag](doc/concepts.md#databag) to give each script the
+right inputs and collects outputs that may be required later. Combined with a
+simple built-in variable substitution system, this makes gluing completely 
+different systems together easy, eg:
+
+```
+cloudformation -> ekscl -> more cloudformation -> heml -> kubectl -> ...
 ```
 
-## Setup
-* AWS CLI
-* eksctl
-* kubectl
-* helm
-* Python 3 + pip
-
-
+To reduce dependency on ringmaster and allow easy debugging and repeatable
+deployments, substitution results are stored adjacent to their input files, so
+they can be added to git or use directly by tools such as `kubectl`.
 
 ## Reference
 
 1. [Concepts](doc/concepts.md)
-2. [Authentication](doc/authentication.md)
-3. [Handlers](doc/handlers.md)
-4. [Worked Example](doc/worked_example.md)
-
-
-
-
- 
-
-
-### Directory structure
-
-```
-.
-├── databag.yaml
-├── output_databag.yaml
-└── stack
-    ├── down
-    │     ├── 0010
-    │     │     └── cluster.sh
-    │     └── 0020
-    │         └── infra.cloudformation.yaml -> ../../shared/infra.cloudformation.yaml
-    ├── shared
-    │     └── infra.cloudformation.yaml
-    └── up
-        ├── 0010
-        │     └── infra.cloudformation.yaml -> ../../shared/infra.cloudformation.yaml
-        ├── 0020
-        │     └── cluster.sh
-        ├── 0030
-        │     └── get_eks_cluster_info
-        ├── 0040
-        │     ├── iam_policy.json
-        │     └── load_balancer_iam.sh
-        ├── 0050
-        │     └── iam_service_account.sh
-        ├── 0060
-        │     ├── crds.yaml
-        │     ├── deploy_load_balancer.sh
-        │     └── kustomization.yaml
-        ├── 0070
-        │     ├── csidriver.kubectl.yaml
-        │     └── storage_security_groups.ringmaster.py
-        ├── 0080
-        │     ├── claim.kubectl.yaml
-        │     ├── pv.kubectl.yaml
-        │     └── storageclass.kubectl.yaml
-        └── 0090
-            └── solarwinds_papertrail.yaml
-
-```
-
-
+2. [Setup](doc/setup.md)
+3. [Authentication](doc/authentication.md)
+4. [Handlers](doc/handlers.md)
+5. [Scripts](doc/scripts.md)
+6. [Variables](doc/variables.md)   
+7. [Worked Example](doc/worked_example.md)

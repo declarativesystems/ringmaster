@@ -4,7 +4,7 @@ _Zero to hero_
 
 ## 1. Stack assembly
 
-_Lets go super deluxe and get everything_
+_Lets go super deluxe and get everything..._
 
 ```shell
 ringmaster get stack/0010-iam https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0010-iam
@@ -20,12 +20,12 @@ ringmaster get stack/0160-efs-pv https://raw.githubusercontent.com/declarativesy
 ringmaster get stack/0210-solarwinds-papertrail https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0210-solarwinds-papertrail
 ringmaster get stack/0220-external-secrets https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0220-external-secrets
 ringmaster get stack/0230-external-dns https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0230-external-dns
-ringmaster get stack/0320-k53certbot https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0320-k53certbot
-ringmaster get stack/0330-aws-load-balancer https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0330-aws-load-balancer
-ringmaster get stack/0340-ambassador https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0340-ambassador
+ringmaster get stack/0240-k53certbot https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0240-k53certbot
+ringmaster get stack/0250-aws-load-balancer https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0250-aws-load-balancer
+ringmaster get stack/0260-ambassador https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0260-ambassador
 ```
 
-_This will create the following directory structure_
+_This will create the following directory structure..._
 
 ```shell
 stack/
@@ -76,15 +76,15 @@ stack/
 ├── 0230-external-dns
 │     ├── externaldns.kubectl.yaml
 │     └── metadata.yaml
-├── 0320-k53certbot
+├── 0240-k53certbot
 │     ├── 0-zerossl.secret_kubectl.yaml
 │     ├── k53certbot.kubectl.yaml
 │     └── metadata.yaml
-├── 0330-aws-load-balancer
+├── 0250-aws-load-balancer
 │     ├── helm_deploy.yaml
 │     ├── kustomization.yaml
 │     └── metadata.yaml
-└── 0340-ambassador
+└── 0260-ambassador
     ├── helm_deploy.yaml
     └── metadata.yaml
 
@@ -121,7 +121,7 @@ kubernetes_version: "1.18"
 
 # private docker repository - eg artifactory
 docker_server: yourserver.jfrog.io
-docker_username: admin
+docker_username: bob
 docker_email: your@email.com
 certbot_admin_email: your@email.com
 eks_cluster_admin_arn: arn:aws:iam::111122223333:user/some.user
@@ -130,7 +130,7 @@ eks_cluster_admin_arn: arn:aws:iam::111122223333:user/some.user
 
 ## 3. export secret values
 
-The scripts are expecting some secret values exported from your environment:
+These scripts are expecting some secret values exported from your environment:
 
 **0130-docker-secret/docker.default.secret_kubectl.yaml**
 
@@ -166,4 +166,10 @@ _Relax while your stack is created_
              '            |     )___\--`
 ```
 
-_Probably dont relax too hard at the moment, this is concept-level software ATM ;-)_
+_Probably don't relax too hard at the moment, this is concept-level software ATM ;-)_
+
+## 5. Customise the stack
+
+You should now have working Kubernetes cluster, if you want to deploy your own
+apps, your free to use regular `kubectl`, `helm` and then use `ringmaster` to
+run these scripts or just run them manually.
