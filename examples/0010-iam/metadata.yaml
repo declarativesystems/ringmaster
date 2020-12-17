@@ -10,6 +10,6 @@ files:
     sha1sum: 9ab2723c476e7233fa24c5ed1a563c1f461b7641
   ExternalDns.iam_policy.json:
     sha1sum: a42129bf47c275ad58302e5fce941fdf04775ae2
-generated_at: '2020-12-17T11:39:43.980700'
+generated_at: '2020-12-17T15:46:15.398878'
 name: 0010-iam
 ringmaster_version: 0.0.2

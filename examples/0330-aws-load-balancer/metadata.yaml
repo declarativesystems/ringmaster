@@ -1,9 +1,11 @@
 description: edit me
 files:
+  crds.yaml:
+    sha1sum: e884b29767a2614fb57f4d155be52434bd4df0d3
   helm_deploy.yaml:
     sha1sum: 3f85643f39bad45ab8588b0dfd6c17f9cac03cf3
   kustomization.yaml:
     sha1sum: 5fb41421f43ea7fbe38e23b5d8e8c6d2aadcbe8d
-generated_at: '2020-12-17T11:39:30.956310'
+generated_at: '2020-12-17T15:46:46.552270'
 name: 0330-aws-load-balancer
 ringmaster_version: 0.0.2
