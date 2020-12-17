@@ -1,0 +1,7 @@
+description: edit me
+files:
+  cluster.eksctl.yaml:
+    sha1sum: 9d7ffdb7789ce98310df6567e4e38c2346564b14
+generated_at: '2020-12-17T11:39:38.964201'
+name: 0110-eks-cluster
+ringmaster_version: 0.0.2

@@ -1,7 +1,7 @@
 description: edit me
 files:
-  stack/0040-solarwinds-papertrail/solarwinds_papertrail.yaml:
-    sha1sum: fec7222a646de65517b92364362c18483adbeb02
-generated_at: '2020-12-15T11:27:11.879859'
-name: solarwinds-papertrail
+  solarwinds_papertrail.yaml:
+    sha1sum: 1a5d3032c8f38e724e97bb3239b7e2c3e00f0979
+generated_at: '2020-12-17T11:39:33.979847'
+name: 0210-solarwinds-papertrail
 ringmaster_version: 0.0.2
