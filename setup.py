@@ -8,7 +8,7 @@ setuptools.setup(
     name="ringmaster.show",
     version=version.version,
     author="Geoff Williams",
-    author_email="None",
+    author_email="geoff@declarativesystems.com",
     description="master of the ring!",
     long_description=long_description,
     long_description_content_type="text/markdown",
