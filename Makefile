@@ -9,3 +9,9 @@ example_checksums:
 	ringmaster metadata examples/0260-ambassador --include values.yaml
 test:
 	pytest
+
+dist:
+	python setup.py bdist_wheel
+
+clean:
+	rm -rf dist

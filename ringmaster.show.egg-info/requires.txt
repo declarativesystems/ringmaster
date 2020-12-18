@@ -3,3 +3,6 @@ boto3
 snakecase
 cfn_flip
 snowflake-connector-python-lite
+loguru
+docopt
+halo

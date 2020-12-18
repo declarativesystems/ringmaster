@@ -34,5 +34,8 @@ setuptools.setup(
 
         # https://github.com/snowflakedb/snowflake-connector-python/issues/284
         "snowflake-connector-python-lite",
+        "loguru",
+        "docopt",
+        "halo",
     ]
 )
