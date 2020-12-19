@@ -28,7 +28,7 @@ ringmaster get stack/0260-ambassador https://raw.githubusercontent.com/declarati
 _This will create the following directory structure..._
 
 ```shell
-stack/
+stack
 ├── 0010-iam
 │     ├── AWSLoadBalancerController.iam_policy.json
 │     ├── Certbot.iam_policy.json
@@ -41,33 +41,33 @@ stack/
 │     └── metadata.yaml
 ├── 0030-vpc
 │     ├── metadata.yaml
-│     ├── vpc.remote_cloudformation.yaml
-│     └── vpc.yaml
+│     └── vpc.remote_cloudformation.yaml
 ├── 0110-eks-cluster
 │     ├── cluster.eksctl.yaml
 │     └── metadata.yaml
 ├── 0120-eks-cluster-access
 │     ├── iam_access.sh
 │     └── metadata.yaml
-├── 0120-vpc-peering
+├── 0130-vpc-peering
 │     ├── metadata.yaml
 │     └── vpcpeering.cloudformation.yaml
-├── 0130-docker-secret
+├── 0140-docker-secret
 │     ├── docker.default.secret_kubectl.yaml
 │     ├── docker.kube-system.secret_kubectl.yaml
 │     └── metadata.yaml
-├── 0140-k8s-efs-driver
+├── 0150-k8s-efs-driver
 │     ├── csidriver.kubectl.yaml
 │     ├── metadata.yaml
 │     └── storageclass.kubectl.yaml
-├── 0150-efs-mount-targets
+├── 0160-efs-mount-targets
 │     ├── efs_mount_targets.ringmaster.py
 │     └── metadata.yaml
-├── 0160-efs-pv
+├── 0170-efs-pv
 │     ├── claim.kubectl.yaml
 │     ├── metadata.yaml
 │     └── pv.kubectl.yaml
 ├── 0210-solarwinds-papertrail
+│     ├── logging-secret.kube-system.secret_kubectl.yaml
 │     ├── metadata.yaml
 │     └── solarwinds_papertrail.yaml
 ├── 0220-external-secrets
@@ -81,13 +81,14 @@ stack/
 │     ├── k53certbot.kubectl.yaml
 │     └── metadata.yaml
 ├── 0250-aws-load-balancer
+│     ├── crds.yaml
 │     ├── helm_deploy.yaml
 │     ├── kustomization.yaml
 │     └── metadata.yaml
 └── 0260-ambassador
     ├── helm_deploy.yaml
-    └── metadata.yaml
-
+    ├── metadata.yaml
+    └── values.yaml
 ```
 
 ## 2. Databag
