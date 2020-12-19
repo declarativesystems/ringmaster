@@ -78,7 +78,7 @@ variable.
 ## Example
 
 _See the complete file at 
-[docker.default.secret_kubectl.yaml](../examples/0130-docker-secret/docker.default.secret_kubectl.yaml)
+[docker.default.secret_kubectl.yaml](../examples/0140-docker-secret/docker.default.secret_kubectl.yaml)
 
 ```yaml
   .dockerconfigjson: >
