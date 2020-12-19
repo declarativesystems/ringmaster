@@ -48,8 +48,9 @@ def setup_logging(level, logger_name=None):
 
 
     # custom level for program output so it can be nicely colourised
-    #logger.remove()
-    logger.add(sys.stdout, format=log_formats[level], filter=logger_name, level=level)
+    logger.remove()
+    logger.debug(f"{logger_name} {level}")
+    logger.add(sys.stdout, format=log_formats[level], level=level)
     prog_level = logger.level("OUTPUT", no=25, color="<white><dim>", icon="🤡")
 
     logger.debug("====[debug mode enabled]====")
