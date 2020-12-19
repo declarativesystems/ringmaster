@@ -98,7 +98,6 @@ the expected values - adjust as needed:
 ```yaml
 cluster_name: mycluster
 aws_region: us-east-1
-
 aws_account_id: 111122223333
 aws_load_balancer_controller_service_name: aws-load-balancer-controller
 eks_external_secrets_service_name: external-secrets-kubernetes-external-secrets
@@ -113,10 +112,6 @@ availability_zone_a: us-east-1a
 availability_zone_b: us-east-1b
 # cloudformation needs a string...
 availability_zones: us-east-1a,us-east-1b
-
-# ran out of EIPs...
-create_nat_gateways: "false"
-dns_zone: your.domain.com
 kubernetes_version: "1.18"
 
 # private docker repository - eg artifactory
