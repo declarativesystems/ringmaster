@@ -7,22 +7,22 @@ _Zero to hero_
 _Lets go super deluxe and get everything..._
 
 ```shell
-ringmaster get stack/0010-iam https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0010-iam
-ringmaster get stack/0020-efs https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0020-efs
-ringmaster get stack/0030-vpc https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0030-vpc
-ringmaster get stack/0110-eks-cluster https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0110-eks-cluster
-ringmaster get stack/0120-eks-cluster-access https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0120-eks-cluster-access
-ringmaster get stack/0120-vpc-peering https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0120-vpc-peering
-ringmaster get stack/0130-docker-secret https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0130-docker-secret
-ringmaster get stack/0140-k8s-efs-driver https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0140-k8s-efs-driver
-ringmaster get stack/0150-efs-mount-targets https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0150-efs-mount-targets
-ringmaster get stack/0160-efs-pv https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0160-efs-pv
-ringmaster get stack/0210-solarwinds-papertrail https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0210-solarwinds-papertrail
-ringmaster get stack/0220-external-secrets https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0220-external-secrets
-ringmaster get stack/0230-external-dns https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0230-external-dns
-ringmaster get stack/0240-k53certbot https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0240-k53certbot
-ringmaster get stack/0250-aws-load-balancer https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0250-aws-load-balancer
-ringmaster get stack/0260-ambassador https://raw.githubusercontent.com/declarativesystems/ringmaster/release0/examples/0260-ambassador
+ringmaster get stack/0010-iam https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0010-iam
+ringmaster get stack/0020-efs https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0020-efs
+ringmaster get stack/0030-vpc https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0030-vpc
+ringmaster get stack/0110-eks-cluster https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0110-eks-cluster
+ringmaster get stack/0120-eks-cluster-access https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0120-eks-cluster-access
+ringmaster get stack/0120-vpc-peering https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0120-vpc-peering
+ringmaster get stack/0130-docker-secret https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0130-docker-secret
+ringmaster get stack/0140-k8s-efs-driver https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0140-k8s-efs-driver
+ringmaster get stack/0150-efs-mount-targets https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0150-efs-mount-targets
+ringmaster get stack/0160-efs-pv https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0160-efs-pv
+ringmaster get stack/0210-solarwinds-papertrail https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0210-solarwinds-papertrail
+ringmaster get stack/0220-external-secrets https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0220-external-secrets
+ringmaster get stack/0230-external-dns https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0230-external-dns
+ringmaster get stack/0240-k53certbot https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0240-k53certbot
+ringmaster get stack/0250-aws-load-balancer https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0250-aws-load-balancer
+ringmaster get stack/0260-ambassador https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0260-ambassador
 ```
 
 _This will create the following directory structure..._
