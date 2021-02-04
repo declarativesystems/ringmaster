@@ -184,6 +184,7 @@ def run(filename, verb):
             if os.path.exists(constants.OUTPUT_DATABAG_FILE) else constants.DATABAG_FILE
         data = load_databag(databag_file)
         do_file(filename, verb, data)
+        save_output_databag(data)
     else:
         logger.error(f"file not found: {filename}")
 
