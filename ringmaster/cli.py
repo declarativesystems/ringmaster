@@ -57,7 +57,7 @@ def setup_logging(level, logger_name=None):
 
 
 def main():
-    arguments = docopt(__doc__, version=version.version)
+    arguments = docopt(__doc__, version=version.__version__)
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")

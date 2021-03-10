@@ -7,7 +7,7 @@ def test_version():
         "ringmaster --version",
         shell=True
     )
-    assert bytes(version.version, "utf-8") in capture
+    assert bytes(version.__version__, "utf-8") in capture
 
 
 def test_bad_command():

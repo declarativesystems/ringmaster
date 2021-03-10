@@ -35,7 +35,7 @@ import ringmaster.util as util
 debug = False
 
 metadata = {
-    "ringmaster_version": version.version,
+    "ringmaster_version": version.__version__,
     "generated_at": datetime.now().isoformat(),
     "description": "edit me",
     constants.METADATA_FILES_KEY: {},
