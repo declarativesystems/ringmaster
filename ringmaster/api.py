@@ -50,7 +50,7 @@ def load_databag(databag_file):
     data = {
         "msg_up_to_date": constants.MSG_UP_TO_DATE,
         "up_verb": constants.UP_VERB,
-        "down_verb": constants.UP_VERB,
+        "down_verb": constants.DOWN_VERB,
     }
 
     # load values from user
