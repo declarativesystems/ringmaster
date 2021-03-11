@@ -116,9 +116,9 @@ def base64encode(string):
     return base64_bytes.decode('ascii')
 
 
-def substitute_placeholders_from_memory_to_memory(lines, verb, data):
+def substitute_placeholders_from_memory_to_memory(raw, verb, data):
     """replace all variables placeholders list of lines and return the result"""
-    template = Template("\n".join(lines), undefined=StrictUndefined)
+    template = Template(raw, undefined=StrictUndefined, keep_trailing_newline=True)
 
     # add `env` key with contents of environment
     data_with_env = {**data, "env": os.environ.copy()}
@@ -128,7 +128,7 @@ def substitute_placeholders_from_memory_to_memory(lines, verb, data):
     except UndefinedError as e:
         if verb == constants.DOWN_VERB:
             logger.warning(f"returning original content due to: {e}")
-            buffer = lines
+            buffer = raw
         else:
             raise e
     return buffer
@@ -138,7 +138,11 @@ def substitute_placeholders_from_file_to_memory(filename, verb, data):
     """replace all variables placeholders in filename and return the result"""
     if os.path.exists(filename):
         with open(filename, "r") as in_file:
-            buffer = substitute_placeholders_from_memory_to_memory(in_file, verb, data)
+            buffer = substitute_placeholders_from_memory_to_memory(
+                in_file.read(),
+                verb,
+                data
+            )
     else:
         raise RuntimeError(f"No such file: {filename}")
 
@@ -157,7 +161,7 @@ def substitute_placeholders_from_file_to_file(filename, comment_delim, verb, dat
                 with open(filename, "r") as in_file:
                     out_file.write(
                         substitute_placeholders_from_memory_to_memory(
-                            in_file.readlines(),
+                            in_file.read(),
                             verb,
                             data,
                         )

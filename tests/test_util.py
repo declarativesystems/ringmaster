@@ -4,6 +4,7 @@ import os
 from jinja2.exceptions import UndefinedError
 import ringmaster.constants
 
+
 def test_string_to_snakecase():
     assert "lowercase_hyphen_separated" \
            == util.string_to_snakecase("lowercase-hyphen-separated")
@@ -11,12 +12,22 @@ def test_string_to_snakecase():
            == util.string_to_snakecase("mixed-CasePascalCaseAndHyphenSeparated")
 
 
+def test_same_line_count():
+    """Check we have the same number of lines after processing template"""
+    processed = util.substitute_placeholders_from_memory_to_memory(
+        "one\ntwo\n",
+        ringmaster.constants.UP_VERB,
+        {}
+    )
+    assert processed == "one\ntwo\n"
+
+
 def test_resolve_replacement_token():
     data = {
         "atoken": "avalue",
     }
     assert "avalue" == util.substitute_placeholders_from_memory_to_memory(
-        ["{{atoken}}"],
+        "{{atoken}}",
         ringmaster.constants.UP_VERB,
         data
     )
@@ -24,14 +35,14 @@ def test_resolve_replacement_token():
     # raise on missing token
     with pytest.raises(UndefinedError):
         util.substitute_placeholders_from_memory_to_memory(
-            ["{{nohere}}"],
+            "{{nohere}}",
             ringmaster.constants.UP_VERB,
             data
         )
 
     # no raise on missing token if going down
     util.substitute_placeholders_from_memory_to_memory(
-        ["{{nohere}}"],
+        "{{nohere}}",
         ringmaster.constants.DOWN_VERB,
         data
     )
@@ -45,14 +56,14 @@ def test_resolve_env():
     os.environ["x"] = value
 
     assert value == util.substitute_placeholders_from_memory_to_memory(
-        ["{{env.x}}"],
+        "{{env.x}}",
         ringmaster.constants.UP_VERB,
         {},
     )
 
     with pytest.raises(UndefinedError):
         assert value == util.substitute_placeholders_from_memory_to_memory(
-            ["{{env.nothere}}"],
+            "{{env.nothere}}",
             ringmaster.constants.UP_VERB,
             {},
         )
