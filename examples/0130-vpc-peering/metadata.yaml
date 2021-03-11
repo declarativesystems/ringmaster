@@ -2,6 +2,6 @@ description: edit me
 files:
   vpcpeering.cloudformation.yaml:
     sha1sum: 54f2670156cefd5f182ab1cd9a8d236e05bd0594
-generated_at: '2020-12-18T17:18:32.831528'
-name: 0120-vpc-peering
-ringmaster_version: 0.0.2
+generated_at: '2021-03-10T16:48:36.494155'
+name: 0130-vpc-peering
+ringmaster_version: 0.2.0+037a7aa

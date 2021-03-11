@@ -11,8 +11,6 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-import base64
-import re
 import os
 from . import constants
 from loguru import logger
@@ -24,7 +22,9 @@ from contextlib import ExitStack
 from halo import Halo
 import hashlib
 import pathlib
-from urllib.parse import urlparse, urlunparse
+import base64
+from jinja2 import Template, StrictUndefined
+from jinja2.exceptions import UndefinedError
 
 
 def walk(data, parent_name=None):
@@ -109,127 +109,23 @@ def flatten_nested_dict(data):
 
     return flattened
 
+
 def base64encode(string):
     string_bytes = string.encode('ascii')
     base64_bytes = base64.b64encode(string_bytes)
     return base64_bytes.decode('ascii')
 
 
-def resolve_env(key):
-    resolved = os.environ.get(key)
-    if not resolved:
-        raise KeyError(f"missing requested environment variable:{key}")
-    return resolved
-
-conversion_functions = {
-    constants.CFN_BASE64: base64encode
-}
-
-resolve_functions = {
-    constants.RFN_ENV: resolve_env
-}
-
-def resolve_rfn(replacement_token):
-    """resolve any replacement function from a replacement token, eg:
-    env(foo) would return env, foo"""
-
-    replacement_token_split = replacement_token.split("(")
-    if len(replacement_token_split) == 2:
-        fn_name = replacement_token_split[0]
-        # chomp the last character to get rid of `)`
-        replacement_token_name = replacement_token_split[1][:-1]
-    elif len(replacement_token_split) > 2:
-        raise RuntimeError(f"only one replacement function is allowed, not:{replacement_token}")
-    else:
-        fn_name = None
-        replacement_token_name = replacement_token_split[0]
-
-    return fn_name, replacement_token_name
-
-def resolve_token_value(replacement_token, data):
-    """the token value is the value we want to obtain from a function call or
-    by looking in the databag. Multiple values can be joined with string
-    literals, eg `foo':'env(bar)` would look in the databag for `foo`, append
-    string literal `:` and the resolve `bar` from the environment"""
-
-    # split on quoted string literals, this gives a list which includes the
-    # captured separators:
-    # >>> re.split(constants.SINGLE_QUOTED_STRING_REGEX, "something':'else':'")
-    # ['something', "':'", 'else', "':'", '']
-    replacement_tokens_to_resolve = re.split(
-        constants.SINGLE_QUOTED_STRING_REGEX,
-        replacement_token,
-    )
-
-    resolved = ""
-    logger.debug(f"replacement token list: {replacement_tokens_to_resolve}")
-    for token in replacement_tokens_to_resolve:
-        logger.trace(f"checking token:{token}")
-        if token.startswith("'"):
-            # leading quote denotes string literal - remove any backslashes as
-            # well as the quotes themselves
-            resolved += token.replace("\\", "")[1:-1]
-        elif token != "":
-            fn_name, token_name = resolve_rfn(token)
-            if fn_name:
-                fn = resolve_functions.get(fn_name)
-                if fn:
-                    resolved_token = fn(token_name)
-                else:
-                    raise RuntimeError(f"no such resolve function:{fn_name}")
-            else:
-                resolved_token = data.get(token_name)
-                if not resolved_token:
-                    raise KeyError(f"requested field: {token_name} missing from databag. Available: {data.keys()}")
-            resolved += resolved_token
-    return resolved
-
-
-def resolve_replacement_token(token, data):
-    """split a token eg username|base64 on the pipe `|` operator and apply each operator"""
-    token_split = token.split("|")
-
-    # the value is the the part before the first pipe - it gets replaced with
-    # a value from running a function or looking in the databag
-    replacement_token_value = token_split[0]
-    resolved_token = resolve_token_value(replacement_token_value, data)
-
-    if len(token_split) > 1:
-        # apply any operators to resolved token
-        for i in range(1, len(token_split)):
-            fn_name = token_split[i]
-            fn = conversion_functions.get(fn_name)
-            if fn:
-                resolved_token = fn(resolved_token)
-            else:
-                raise KeyError(f"No such pipe function:{fn_name}")
-
-    return resolved_token
-
-
-def substitute_placeholders_line(line, data):
-    replacement_tokens = re.findall(constants.SUBSTITUTE_VARIABLE_REGEX, line)
-    # set is used to de-dupe the list
-    for replacement_token_braced in list(set(replacement_tokens)):
-        # chomp the ${} leaving the replacement token - eg: ${foo':'bar|base64} -> foo':'bar|base64
-        replacement_token = replacement_token_braced[2:-1]
-        resolved_token = resolve_replacement_token(replacement_token, data)
-        line = line.replace(replacement_token_braced, resolved_token)
-
-    return line
-
-
 def substitute_placeholders_from_memory_to_memory(lines, verb, data):
     """replace all variables placeholders list of lines and return the result"""
-    buffer = ""
+    template = Template("\n".join(lines), undefined=StrictUndefined)
+
+    # add `env` key with contents of environment
+    data_with_env = {**data, "env": os.environ.copy()}
+
     try:
-        for line in lines:
-            substituted_line = substitute_placeholders_line(line, data)
-            buffer += substituted_line
-            if not substituted_line.endswith("\n"):
-                # some input streams may have line endings stripped - put em back
-                buffer += "\n"
-    except KeyError as e:
+        buffer = template.render(data_with_env)
+    except UndefinedError as e:
         if verb == constants.DOWN_VERB:
             logger.warning(f"returning original content due to: {e}")
             buffer = lines
@@ -259,11 +155,16 @@ def substitute_placeholders_from_file_to_file(filename, comment_delim, verb, dat
             with open(processed_file, "w") as out_file:
                 out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
                 with open(filename, "r") as in_file:
-                    for line in in_file:
-                        out_file.write(substitute_placeholders_line(line, data))
+                    out_file.write(
+                        substitute_placeholders_from_memory_to_memory(
+                            in_file.readlines(),
+                            verb,
+                            data,
+                        )
+                    )
         else:
             raise RuntimeError(f"No such file: {filename}")
-    except KeyError as e:
+    except UndefinedError as e:
         if verb == constants.DOWN_VERB:
             logger.warning(f"returning original file due to: {e}")
             processed_file = filename

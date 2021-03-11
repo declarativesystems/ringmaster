@@ -4,6 +4,6 @@ files:
     sha1sum: 2727dd45ad1c5e230c615db80690a424be77d055
   values.yaml:
     sha1sum: 8c73d3e6eaa83807852ab9ce305b966007ebb246
-generated_at: '2020-12-18T17:18:43.451195'
+generated_at: '2021-03-10T16:48:39.838916'
 name: 0260-ambassador
-ringmaster_version: 0.0.2
+ringmaster_version: 0.2.0+037a7aa

@@ -4,43 +4,43 @@ apiVersion: eksctl.io/v1alpha5
 kind: ClusterConfig
 
 metadata:
-  name: ${cluster_name}
-  region: ${aws_region}
-  version: "${kubernetes_version}"
+  name: {{ cluster_name }}
+  region: {{ aws_region }}
+  version: "{{ kubernetes_version }}"
 
 availabilityZones:
-  - ${availability_zone_a}
-  - ${availability_zone_b}
+  - {{ availability_zone_a }}
+  - {{ availability_zone_b }}
 
 iam:
   withOIDC: true
   serviceAccounts:
     # aws-load-balancer
     - metadata:
-        name: ${aws_load_balancer_controller_service_name}
+        name: {{ aws_load_balancer_controller_service_name }}
         namespace: kube-system
       attachPolicyARNs:
-        - ${aws_iam_policy_aws_load_balancer_controller}
+        - {{ aws_iam_policy_aws_load_balancer_controller }}
     - metadata:
-        name: ${eks_external_secrets_service_name}
+        name: {{ eks_external_secrets_service_name }}
         namespace: kube-system
       attachPolicyARNs:
-        - ${aws_iam_policy_eks_external_secrets}
+        - {{ aws_iam_policy_eks_external_secrets }}
     - metadata:
-        name: ${ambassador_service_name}
+        name: {{ ambassador_service_name }}
         namespace: kube-system
       attachPolicyARNs:
-        - ${aws_iam_policy_aws_load_balancer_controller}
+        - {{ aws_iam_policy_aws_load_balancer_controller }}
     - metadata:
-        name: ${external_dns_service_name}
+        name: {{ external_dns_service_name }}
         namespace: kube-system
       attachPolicyARNs:
-        - ${aws_iam_policy_external_dns}
+        - {{ aws_iam_policy_external_dns }}
     - metadata:
-        name: ${certbot_service_name}
+        name: {{ certbot_service_name }}
         namespace: kube-system
       attachPolicyARNs:
-        - ${aws_iam_policy_certbot}
+        - {{ aws_iam_policy_certbot }}
 
 
 vpc:

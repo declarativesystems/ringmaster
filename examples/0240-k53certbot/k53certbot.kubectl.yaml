@@ -62,7 +62,7 @@ spec:
                   name: zerossl
                   key: zerossl_api_key
             - name: CERTBOT_ADMIN_EMAIL
-              value: ${certbot_admin_email}
+              value: {{ certbot_admin_email }}
           command:
             - k53certbot
           args:

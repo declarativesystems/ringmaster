@@ -1,7 +1,7 @@
 description: edit me
 files:
   helm_deploy.yaml:
-    sha1sum: a5b20c3a67c5ae3582f352f62084f3b49ff2d7df
-generated_at: '2020-12-18T17:18:27.967571'
+    sha1sum: 6cb2173d41b2d8dc6cb370923e6251791d9f91fc
+generated_at: '2021-03-10T16:48:28.079999'
 name: 0220-external-secrets
-ringmaster_version: 0.0.2
+ringmaster_version: 0.2.0+037a7aa

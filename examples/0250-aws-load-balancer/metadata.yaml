@@ -3,9 +3,9 @@ files:
   crds.yaml:
     sha1sum: e884b29767a2614fb57f4d155be52434bd4df0d3
   helm_deploy.yaml:
-    sha1sum: 3f85643f39bad45ab8588b0dfd6c17f9cac03cf3
+    sha1sum: d93a2a3e44ee8a1ad1d49e6dbdb7a62fd34b9de6
   kustomization.yaml:
     sha1sum: 5fb41421f43ea7fbe38e23b5d8e8c6d2aadcbe8d
-generated_at: '2020-12-18T17:18:42.469658'
+generated_at: '2021-03-10T16:48:39.004424'
 name: 0250-aws-load-balancer
-ringmaster_version: 0.0.2
+ringmaster_version: 0.2.0+037a7aa

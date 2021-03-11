@@ -25,7 +25,7 @@ you can get up and running as quick as possible. There are no agents, hubs,
 gits or daemons - unless you add them yourself. 
 
 There is also no custom DSL or new programming language to learn, although
-there is a simple templating system.
+[jinja2](https://jinja.palletsprojects.com/) is used for templating.
 
 Ringmaster is just files on a disk and calls to other systems made in an order
 you decide.

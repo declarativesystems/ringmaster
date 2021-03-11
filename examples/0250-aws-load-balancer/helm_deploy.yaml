@@ -4,8 +4,8 @@ name: aws-load-balancer-controller
 namespace: kube-system
 install: eks/aws-load-balancer-controller
 set:
-  - clusterName=${cluster_name}
+  - clusterName={{ cluster_name }}
   - serviceAccount.create=false
-  - serviceAccount.name=${aws_load_balancer_controller_service_name}
-  - region=${aws_region}
-  - vpcId=${resourcesvpcconfig_vpcid}
+  - serviceAccount.name={{ aws_load_balancer_controller_service_name }}
+  - region={{ aws_region }}
+  - vpcId={{ resourcesvpcconfig_vpcid }}

@@ -110,7 +110,7 @@ for databag fields and will attempt to lookup:
 * `vpc_private_subnet2_aid`
 
 Everything in the `Output` section will also be added to the databag for the
-next script to use by reversing this logic, so this stack add the value
+next script to use by reversing this logic, so this stack adds the value
 `db_rds_address` to the databag which would be set to the address of the RDS
 instance.
 
@@ -129,6 +129,6 @@ spec:
         - name: someapp
           env:
             - name: DB_ADDRESS
-              value: ${db_rds_address}
+              value: {{ db_rds_address }}
 ```
 

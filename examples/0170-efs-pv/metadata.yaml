@@ -3,7 +3,7 @@ files:
   claim.kubectl.yaml:
     sha1sum: 885e332d0188ab56453f0a1aa508bf9445760d7f
   pv.kubectl.yaml:
-    sha1sum: 3b7d6661774981cc609073a18d777cd3138f20f4
-generated_at: '2020-12-18T17:18:39.566072'
-name: 0160-efs-pv
-ringmaster_version: 0.0.2
+    sha1sum: c9b578b4b75132405ced3006a17661a5a98a9b2b
+generated_at: '2021-03-10T16:48:31.457109'
+name: 0170-efs-pv
+ringmaster_version: 0.2.0+037a7aa

@@ -1,9 +1,9 @@
 description: edit me
 files:
   0-zerossl.secret_kubectl.yaml:
-    sha1sum: 154b4b21572307e3efa9fb8c88e97fa6262539ac
+    sha1sum: 5336323d94b7ba7b900ba27d984b6029da181de6
   k53certbot.kubectl.yaml:
-    sha1sum: 4577eb5244a34353c5265dbcccc9510f421c07d7
-generated_at: '2020-12-18T17:18:28.948666'
+    sha1sum: 724840aa82c0e00b9b2fd96b0e8bebbf5407d487
+generated_at: '2021-03-10T16:48:28.920766'
 name: 0240-k53certbot
-ringmaster_version: 0.0.2
+ringmaster_version: 0.2.0+037a7aa

@@ -45,56 +45,13 @@ stacks you can support multiple independent scopes and by copying
 
 ## Interpolation expressions
 
-`${name_of_variable}` identifies a substitution variable. The entire expression
-will be replaced with the value of `name_of variable` during processing
-
-## String literals
-
-String literals can be inserted into interpolation expressions by using single
-quotes `'foo'`
-
-## Filters
-
-Filter expressions collect the output of the expression and transform it. They
-are identified by the pipe `|` character.
-
-* Only `|base64` is supported at the moment
-
-## Functions
-
-Functions allow data to be resolved from outside the databag
-
-* Only the `env()` function is supported at the moment
+Interpolation is processed by [Jinja2](https://jinja.palletsprojects.com/)
+so behaves as documented. `{{ name_of_variable }}` identifies a substitution
+variable. The entire expression will be replaced with the value of 
+`name_of_variable` during processing
 
 ## Missing variables
 
 Missing variables will trigger an error advising the name of the missing 
 variable.
 
-## Loops, conditionals, etc
-
-* Not supported
-
-## Example
-
-_See the complete file at 
-[docker.default.secret_kubectl.yaml](../examples/0140-docker-secret/docker.default.secret_kubectl.yaml)
-
-```yaml
-  .dockerconfigjson: >
-    {
-      "auths": {
-        "https://${docker_server}": {
-          "auth": "${docker_email':'env(docker_password)|base64}",
-          "email": "${docker_email}"
-        }
-      }
-    }
-```
-
-* `docker_server` and `docker_email` are simple values resolved from the databag
-* `auth` makes uses of all the current interpolation features:
-    1. `docker_email` is resolved from databag
-    2. string literal `:` is appended to it
-    3. `docker_password` is resolved from the environment
-    4. All of this data is base64 encoded
