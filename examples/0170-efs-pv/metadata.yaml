@@ -4,6 +4,6 @@ files:
     sha1sum: 885e332d0188ab56453f0a1aa508bf9445760d7f
   pv.kubectl.yaml:
     sha1sum: c9b578b4b75132405ced3006a17661a5a98a9b2b
-generated_at: '2021-03-10T16:48:31.457109'
+generated_at: '2021-03-11T16:14:57.789487'
 name: 0170-efs-pv
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0

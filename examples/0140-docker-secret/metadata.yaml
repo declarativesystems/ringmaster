@@ -4,6 +4,6 @@ files:
     sha1sum: c85cca53ea8adfc9e0655246c45cb3e245d7c6db
   docker.kube-system.secret_kubectl.yaml:
     sha1sum: 2a4611bd5e889a213e087b423cdfa680462f211d
-generated_at: '2021-03-10T16:48:29.781839'
+generated_at: '2021-03-11T16:14:56.146310'
 name: 0140-docker-secret
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0

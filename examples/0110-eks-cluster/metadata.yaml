@@ -2,6 +2,6 @@ description: edit me
 files:
   cluster.eksctl.yaml:
     sha1sum: 5f195fb0ffb0b1c208320eba5c1074a91eb29c93
-generated_at: '2021-03-10T16:48:33.968124'
+generated_at: '2021-03-11T16:15:00.267231'
 name: 0110-eks-cluster
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0

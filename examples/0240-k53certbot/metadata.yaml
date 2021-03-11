@@ -4,6 +4,6 @@ files:
     sha1sum: 5336323d94b7ba7b900ba27d984b6029da181de6
   k53certbot.kubectl.yaml:
     sha1sum: 724840aa82c0e00b9b2fd96b0e8bebbf5407d487
-generated_at: '2021-03-10T16:48:28.920766'
+generated_at: '2021-03-11T16:14:55.305653'
 name: 0240-k53certbot
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0

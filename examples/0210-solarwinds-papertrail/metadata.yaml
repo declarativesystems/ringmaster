@@ -4,6 +4,6 @@ files:
     sha1sum: 9eef2ac6aa633d6cda0603ba2d7c24907792c280
   solarwinds_papertrail.yaml:
     sha1sum: 1693c7059a7a7ea3f797ff627ebde343187f9eef
-generated_at: '2021-03-10T16:48:30.614193'
+generated_at: '2021-03-11T16:14:56.968094'
 name: 0210-solarwinds-papertrail
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0

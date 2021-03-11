@@ -1,9 +1,16 @@
 [tool.poetry]
-name = "ringmaster"
-version = "0.2.0+037a7aa"
+name = "ringmaster.show"
+version = "0.2.0"
 description = "The world is a circus and you are the ringmaster!"
 authors = ["Geoff Williams <geoff@declarativesystems.com>"]
 license = "Apache 2.0"
+readme = "README.md"
+homepage = "https://ringmaster.show"
+repository = "https://github.com/declarativesystems/ringmaster"
+documentation = "https://ringmaster.show/"
+packages = [
+    { include = "ringmaster" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"

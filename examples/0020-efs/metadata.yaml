@@ -2,6 +2,6 @@ description: edit me
 files:
   efs.cloudformation.yaml:
     sha1sum: d64287a400e70395fc0351261979929898cd8bb5
-generated_at: '2021-03-10T16:48:26.367040'
+generated_at: '2021-03-11T16:14:52.804662'
 name: 0020-efs
-ringmaster_version: 0.2.0+037a7aa
+ringmaster_version: 0.2.0
