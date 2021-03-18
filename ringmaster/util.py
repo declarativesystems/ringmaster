@@ -76,7 +76,7 @@ def run_cmd(cmd, data=None):
     debug = data.get("debug", False)
     with ExitStack() as stack:
         if not debug:
-            stack.enter_context(Halo(text=f"Running {cmd[0]}", spinner='dots'))
+            stack.enter_context(Halo(text=f"Running {cmd}", spinner='dots'))
 
         with subprocess.Popen(cmd,
                               stdout=subprocess.PIPE,
