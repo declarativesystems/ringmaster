@@ -28,8 +28,6 @@ import urllib
 import yaml
 from ringmaster.util import flatten_nested_dict
 
-RECOMMENDED_EKSCTL_VERSION="0.31.0-rc.1"
-
 # AWS/boto3 API error messages to look for. Use partial regex to protect
 # against upstream changes as much as we can
 ERROR_UP_TO_DATE = r"No updates are to be performed"
@@ -150,6 +148,14 @@ def eks_cluster_info(aws_region, cluster_name, data):
 
         for i, value in enumerate(public_subnet_ids):
             data[f"cluster_public_subnet{i+1}"] = value
+
+        # if we are using ODIC to create cloudformation IAM roles, we need to
+        # strip `https://` from the start of identity_oidc_issuer or we get
+        # errors. Its impossible to do this natively in cloudformation so
+        # simple munge here
+        if "identity_oidc_issuer" in data:
+            data["identity_oidc_issuer_stripped"] = \
+                data["identity_oidc_issuer"].replace("https://", "")
 
     except KeyError as e:
         raise RuntimeError(
