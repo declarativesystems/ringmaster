@@ -14,16 +14,21 @@
 """ringmaster
 
 Usage:
-  ringmaster [--debug] <dir> (up|down) [--start=<dir>]
+  ringmaster [--debug] <dir> (up|down) [--start=<dir>] [--env=<dir>] [--no-merge-env]
   ringmaster [--debug] get <dir> <url>
   ringmaster [--debug] metadata <dir> [--include=<files>]
-  ringmaster [--debug] --run <filename> (up|down)
+  ringmaster [--debug] --run <filename> (up|down) [--env=<dir>] [--no-merge-env]
   ringmaster --version
 
 Options:
   -h --help         Show this screen.
   --version         Show version.
   --debug           Extra debugging messages
+  --env=<dir>       Read/write databags to this sub-directory under .env
+                    otherwise just use .env. Databags will be merged with any
+                    databags in the parent directory with child values taking
+                    precedence unless --no-merge-env is used
+  --no-merge-env    Do not merge databag values between env directories
   --start=<dir_num> up: start here count up, down: start here count down
   --include=<files> comma delimited list of extra files to add to metadata
 """

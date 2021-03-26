@@ -1,0 +1,4 @@
+# this file is ignored
+---
+common_value: common
+parent_value: should not be loaded

@@ -56,7 +56,7 @@ SNOWFLAKE_CLEANUP_FILENAME = "down.snowflake.sql"
 
 
 CFN_BASE64 = "base64"
-RFN_ENV = "env"
+ENV_DIR = ".env"
 METADATA_FILE = "metadata.yaml"
 METADATA_FILES_KEY = "files"
 METADATA_NAME_KEY = "name"

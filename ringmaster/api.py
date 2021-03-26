@@ -341,3 +341,39 @@ def write_metadata(directory, includes):
 
     with open(metadata_file, "w") as f:
         yaml.dump(metadata, f)
+
+
+def get_env_databag(root_dir, merge, env_name):
+    env_dir_section = env_name if env_name else ""
+
+    # deepest directory to load databag from, with optional merging
+    # examples: .env, .env/prod, .env/prod/australia
+    load_dir = os.path.join(root_dir, constants.ENV_DIR, env_dir_section)
+
+    sequential_load_dirs = []
+    look_at_dir = load_dir
+    max_parents = 4
+    depth = 0
+    logger.debug("root_dir={} env_dir={} load_dir={}", root_dir, env_dir_section, load_dir)
+    if merge:
+        # add parent directory until we get back to .env
+        while look_at_dir != root_dir:
+            if depth > max_parents:
+                raise RuntimeError(f".env dir nested too deep! (limit: {max_parents+1}")
+            sequential_load_dirs.append(look_at_dir)
+            look_at_dir = os.path.dirname(look_at_dir)
+            depth += 1
+        sequential_load_dirs.reverse()
+    else:
+        sequential_load_dirs.append(load_dir)
+
+    logger.debug(f"sequential load dirs: {sequential_load_dirs}")
+    data = {}
+    for look_at_dir in sequential_load_dirs:
+        databag_file = os.path.join(look_at_dir, constants.DATABAG_FILE)
+        output_databag_file = os.path.join(look_at_dir, constants.OUTPUT_DATABAG_FILE)
+        target_databag_file = output_databag_file \
+            if os.path.exists(output_databag_file) else databag_file
+        data.update(load_databag(target_databag_file))
+
+    return data
