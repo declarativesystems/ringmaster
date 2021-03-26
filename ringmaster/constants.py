@@ -40,6 +40,7 @@ PATTERN_AWS_IAM_ROLE = ".iam_role.json"
 PATTERN_SECRETS_MANAGER = "secretsmanager.yaml"
 PATTERN_EKSCTL_CONFIG = ".eksctl.yaml"
 PATTERN_SECRET_KUBECTL = ".secret_kubectl.yaml"
+PATTERN_CLOUDFLARE = ".cloudflare.yaml"
 
 MSG_UP_TO_DATE = "[√] up to date"
 SUBSTITUTE_VARIABLE_REGEX = r"(\$\{[^}]+})"

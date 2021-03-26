@@ -31,6 +31,7 @@ import ringmaster.snowflake as snowflake
 from pathlib import Path
 import ringmaster.version as version
 import ringmaster.util as util
+import ringmaster.cloudflare as cloudflare
 
 debug = False
 
@@ -132,6 +133,7 @@ handlers = {
     constants.PATTERN_SECRETS_MANAGER: aws.do_secrets_manager,
     constants.PATTERN_EKSCTL_CONFIG: aws.do_eksctl,
     constants.PATTERN_SECRET_KUBECTL: k8s.do_secret_kubectl,
+    constants.PATTERN_CLOUDFLARE: cloudflare.do_cloudflare,
 }
 
 

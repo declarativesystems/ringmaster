@@ -24,6 +24,7 @@ snowflake-connector-python = "^2.4.1"
 snakecase = "^1.0.1"
 cfn-flip = "^1.2.3"
 Jinja2 = "^2.11.3"
+python-cloudflare = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.2"

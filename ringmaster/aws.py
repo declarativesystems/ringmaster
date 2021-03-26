@@ -569,6 +569,22 @@ def delete_secret(client, secret_id):
         logger.debug(f"secret id:{secret_id} does not exist, moving on")
 
 
+def ensure_secret(data, verb, secret):
+    client = boto3.client('secretsmanager', region_name=data["aws_region"])
+
+    exists, deleted = secret_exists(client, secret["name"])
+    if verb == constants.UP_VERB and exists:
+        update_secret(client, secret["name"], secret["value"], deleted)
+    elif verb == constants.UP_VERB and not exists:
+        create_secret(client, secret["name"], secret["value"])
+    elif verb == constants.DOWN_VERB and exists:
+        delete_secret(client, secret["name"])
+    elif verb == constants.DOWN_VERB and not exists:
+        logger.debug(f"secretsmanager - already deleted:{secret['name']}")
+    else:
+        raise RuntimeError(f"secretsmanager - invalid verb: {verb}")
+
+
 # `secret_id` - The identifier of the secret whose details you want to
 # retrieve. You can specify either the Amazon Resource Name (ARN) or the
 # friendly name of the secret.
@@ -578,20 +594,9 @@ def do_secrets_manager(filename, verb, data):
     with open(processed_file) as f:
         config = yaml.safe_load(f)
 
-    client = boto3.client('secretsmanager', region_name=data["aws_region"])
-
     for secret in config.get("secrets", []):
-        exists, deleted = secret_exists(client, secret["name"])
-        if verb == constants.UP_VERB and exists:
-            update_secret(client, secret["name"], secret["value"], deleted)
-        elif verb == constants.UP_VERB and not exists:
-            create_secret(client, secret["name"], secret["value"])
-        elif verb == constants.DOWN_VERB and exists:
-            delete_secret(client, secret["name"])
-        elif verb == constants.DOWN_VERB and not exists:
-            logger.debug(f"secretsmanager - already deleted:{secret['name']}")
-        else:
-            raise RuntimeError(f"secretsmanager - invalid verb: {verb}")
+        ensure_secret(data, verb, secret)
+
 
 def check_requirements():
     eksctl_version = subprocess.check_output(['eksctl', 'version'])
