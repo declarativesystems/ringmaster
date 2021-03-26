@@ -86,6 +86,8 @@ def ensure_origin_ca_cert(cf, verb, origin_certs, hostname, cb):
     # CA and sign a new cert.
     # TLDR - To re-create secret delete (revoke) the Origin CA cert and
     # the secret in secrets manager, then re-run
+    certificate = None
+    private_key_data = None
     if verb == constants.DOWN_VERB and origin_ca_cert:
         cert_id = origin_ca_cert[0]["id"]
         logger.info(f"Deleting Origin CA cert: {hostname}/{cert_id}")
@@ -98,12 +100,15 @@ def ensure_origin_ca_cert(cf, verb, origin_certs, hostname, cb):
             "csr": csr_data,
             "request_type": "origin-rsa",
         })
-
+        certificate = res["certificate"]
         logger.info(res.get("certificate"))
         logger.info(res.get("csr"))
-        cb(hostname, res["certificate"], private_key_data)
     else:
         logger.info(constants.MSG_UP_TO_DATE)
+
+    logger.debug(f"processing callback for {hostname}")
+    cb(verb, hostname, certificate, private_key_data)
+
 
 # walkthru: https://blog.cloudflare.com/cloudflare-ca-encryption-origin/
 def origin_ca_certs(verb, zone_data, cb):
@@ -153,7 +158,7 @@ def do_cloudflare(filename, verb, data=None):
 
         # callback to run when a certificate has been created
         # for now, always creates an AWS secret
-        def cb(hostname, certificate_data, private_key_data):
+        def cb(verb, hostname, certificate_data, private_key_data):
             secret_string = json.dumps({
                     "tls.crt": certificate_data,
                     "tls.key": private_key_data,
@@ -166,7 +171,7 @@ def do_cloudflare(filename, verb, data=None):
             }
 
             # make the secret..
-            aws.ensure_secret(data, constants.UP_VERB, secret)
+            aws.ensure_secret(data, verb, secret)
 
         origin_ca_certs(verb, yaml_data, cb)
     # except RuntimeError as e:
