@@ -42,31 +42,29 @@ metadata = {
     constants.METADATA_FILES_KEY: {},
 }
 
-def load_databag(databag_file):
+
+def init_databag():
+    """per-run program specific data"""
+
     # users write values as JSON to this file and they are added to the
     # databag incrementally
     _, intermediate_databag_file = tempfile.mkstemp(suffix="json", prefix="ringmaster")
 
-    # general program settings
-    data = {
-        "msg_up_to_date": constants.MSG_UP_TO_DATE,
-        "up_verb": constants.UP_VERB,
-        "down_verb": constants.DOWN_VERB,
+    return {
+        constants.KEY_INTERMEDIATE_DATABAG: intermediate_databag_file,
+        "debug": "debug" if debug else "",
+        "name": os.path.basename(os.getcwd()),
     }
 
+
+def load_databag(databag_file):
     # load values from user
+    data = {}
     if os.path.exists(databag_file):
         with open(databag_file) as f:
             data.update(yaml.safe_load(f))
     else:
         logger.warning(f"missing databag file: {databag_file}")
-
-    # per-run program specific data
-    data.update({
-        constants.KEY_INTERMEDIATE_DATABAG: intermediate_databag_file,
-        "debug": "debug" if debug else "",
-        "name": os.path.basename(os.getcwd()),
-    })
 
     logger.debug(f"loaded databag contents: {data}")
     return data
@@ -180,11 +178,9 @@ def do_stage(data, stage, verb):
             save_output_databag(data)
 
 
-def run(filename, verb):
+def run(filename, merge, env_name, verb):
     if os.path.exists(filename):
-        databag_file = constants.OUTPUT_DATABAG_FILE \
-            if os.path.exists(constants.OUTPUT_DATABAG_FILE) else constants.DATABAG_FILE
-        data = load_databag(databag_file)
+        data = get_env_databag(os.getcwd(), env_name, merge)
         do_file(filename, verb, data)
         save_output_databag(data)
     else:
@@ -205,7 +201,7 @@ def save_output_databag(data):
         yaml.dump(data, f)
 
 
-def run_dir(working_dir, start, verb):
+def run_dir(working_dir, merge, env_name, start, verb):
     """process an 'outer' dir and all its children in order, eg:
     stacks/ <--- this level
         0010
@@ -215,10 +211,7 @@ def run_dir(working_dir, start, verb):
         logger.debug(f"found: {working_dir}")
         started = False
 
-        databag_file = constants.OUTPUT_DATABAG_FILE \
-            if os.path.exists(constants.OUTPUT_DATABAG_FILE) \
-            else constants.DATABAG_FILE
-        data = load_databag(databag_file)
+        data = get_env_databag(os.getcwd(), merge, env_name)
 
         # for some reason the default order is reversed when using ranges so we
         # must always sort. If we are bringing down a stack, reverse the order
@@ -368,7 +361,9 @@ def get_env_databag(root_dir, merge, env_name):
         sequential_load_dirs.append(load_dir)
 
     logger.debug(f"sequential load dirs: {sequential_load_dirs}")
-    data = {}
+
+    # shallow
+    data = constants.DEFAULT_DATABAG.copy()
     for look_at_dir in sequential_load_dirs:
         databag_file = os.path.join(look_at_dir, constants.DATABAG_FILE)
         output_databag_file = os.path.join(look_at_dir, constants.OUTPUT_DATABAG_FILE)
@@ -376,4 +371,5 @@ def get_env_databag(root_dir, merge, env_name):
             if os.path.exists(output_databag_file) else databag_file
         data.update(load_databag(target_databag_file))
 
+    data.update(init_databag())
     return data

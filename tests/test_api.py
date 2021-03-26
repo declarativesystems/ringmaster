@@ -1,6 +1,9 @@
 import os
 import ringmaster.api as api
+import ringmaster.constants as constants
 import pytest
+from loguru import logger
+
 
 # directory containing .env
 root_dir = os.path.relpath(
@@ -44,3 +47,26 @@ def test_deep_nested_env_databag():
     assert data.get("common_value") == "common"
     assert data.get("special_value") == "special"
 
+
+def test_deep_nested_env_no_merge_databag():
+    """merge flag is honored"""
+    data = api.get_env_databag(root_dir, False, "dev/special")
+    logger.debug(data)
+    assert data.get("new_value") is None
+    assert data.get("common_value") is None
+    assert data.get("special_value") == "special"
+
+
+def test_databag_default_values():
+    """default values must be loaded"""
+    data = api.get_env_databag(root_dir, False, "dev/special")
+
+    assert data.get("up_verb") == constants.UP_VERB
+
+
+def test_databag_init_ok():
+    """stale databag values must be updated with per-run settings"""
+    data = api.get_env_databag(root_dir, False, "dev/special")
+
+    assert data.get("intermediate_databag_file") is not None
+    assert data.get("intermediate_databag_file") != "stale"

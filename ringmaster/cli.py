@@ -27,7 +27,7 @@ Options:
   --env=<dir>       Read/write databags to this sub-directory under .env
                     otherwise just use .env. Databags will be merged with any
                     databags in the parent directory with child values taking
-                    precedence unless --no-merge-env is used
+                    precedence unless --no-merge-env is used [default: None]
   --no-merge-env    Do not merge databag values between env directories
   --start=<dir_num> up: start here count up, down: start here count down
   --include=<files> comma delimited list of extra files to add to metadata
@@ -66,6 +66,8 @@ def main():
     setup_logging("DEBUG" if arguments['--debug'] else "INFO")
     api.debug = arguments['--debug']
     logger.debug(f"parsed arguments: ${arguments}")
+    merge = not arguments.get("--no-merge-env")
+    env_name = arguments["--env"]
 
     try:
         if arguments["down"]:
@@ -84,9 +86,9 @@ def main():
         elif arguments["metadata"]:
             api.write_metadata(arguments["<dir>"], arguments.get("--include", []))
         elif arguments["<dir>"]:
-            exit_status = api.run_dir(arguments["<dir>"], arguments['--start'], verb)
+            api.run_dir(arguments["<dir>"], merge, env_name, arguments['--start'], verb)
         elif arguments["--run"]:
-            exit_status = api.run(arguments['<filename>'], verb)
+            api.run(arguments['<filename>'], merge, env_name, verb)
         else:
             raise RuntimeError("one of <dir> or --run expected")
 

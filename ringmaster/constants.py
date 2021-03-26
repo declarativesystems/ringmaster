@@ -62,3 +62,9 @@ METADATA_FILES_KEY = "files"
 METADATA_NAME_KEY = "name"
 METADATA_HASH_KEY = "sha1sum"
 SOURCE_KEY = "source"
+
+DEFAULT_DATABAG = {
+    "msg_up_to_date": MSG_UP_TO_DATE,
+    "up_verb": UP_VERB,
+    "down_verb": DOWN_VERB,
+}
