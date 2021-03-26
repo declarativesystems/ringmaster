@@ -183,7 +183,7 @@ def do_stage(data, stage, verb):
 
 def run(filename, merge, env_name, verb):
     if os.path.exists(filename):
-        data = get_env_databag(os.getcwd(), env_name, merge)
+        data = get_env_databag(os.getcwd(),merge, env_name)
         do_file(filename, verb, data)
         save_output_databag(data)
     else:

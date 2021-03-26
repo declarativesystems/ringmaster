@@ -70,23 +70,27 @@ def create_csr(hostname):
     return csr_data, private_key_data
 
 
-def ensure_origin_ca_cert(cf, origin_certs, hostname, cb):
+def ensure_origin_ca_cert(cf, verb, origin_certs, hostname, cb):
     """create origin CA cert for `domain` if needed"""
 
     def hostname_filter(data):
         return origin_ca_list_contains_hostname(data, hostname)
     pass
 
-    if list(filter(hostname_filter, origin_certs)):
-        # We cannot update/create missing secrets for origins that have
-        # already been provisioned as the certificate private key is only
-        # available while the CSR is being processed. If secret needs to
-        # autohealing capability would have to delete the existing origin
-        # CA and sign a new cert.
-        # TLDR - To re-create secret delete (revoke) the Origin CA cert and
-        # the secret in secrets manager, then re-run
-        logger.info(f"Origin CA cert already exists: {hostname}")
-    else:
+    origin_ca_cert = list(filter(hostname_filter, origin_certs))
+
+    # We cannot update/create missing secrets for origins that have
+    # already been provisioned as the certificate private key is only
+    # available while the CSR is being processed. If secret needs to
+    # autohealing capability would have to delete the existing origin
+    # CA and sign a new cert.
+    # TLDR - To re-create secret delete (revoke) the Origin CA cert and
+    # the secret in secrets manager, then re-run
+    if verb == constants.DOWN_VERB and origin_ca_cert:
+        cert_id = origin_ca_cert[0]["id"]
+        logger.info(f"Deleting Origin CA cert: {hostname}/{cert_id}")
+        cf.certificates.delete(cert_id)
+    elif verb == constants.UP_VERB and not origin_ca_cert:
         logger.debug(f"Creating Origin CA cert: {hostname}")
         csr_data, private_key_data = create_csr(hostname)
         res = cf.certificates.post(data={
@@ -98,6 +102,8 @@ def ensure_origin_ca_cert(cf, origin_certs, hostname, cb):
         logger.info(res.get("certificate"))
         logger.info(res.get("csr"))
         cb(hostname, res["certificate"], private_key_data)
+    else:
+        logger.info(constants.MSG_UP_TO_DATE)
 
 # walkthru: https://blog.cloudflare.com/cloudflare-ca-encryption-origin/
 def origin_ca_certs(verb, zone_data, cb):
@@ -111,13 +117,13 @@ def origin_ca_certs(verb, zone_data, cb):
     # create each requested cert (if stack is going down just delete
     # everything to avoid creating orphans
     certs_to_ensure = zone_data.get("origin_ca_certs", [])
-    if verb == constants.UP_VERB and certs_to_ensure:
+    if certs_to_ensure:
         # get the list of all origin ca certs for this domain
         origin_certs = cf.certificates.get(params={"zone_id": zone_id})
 
         for domain in certs_to_ensure:
             logger.debug(f"ensure wildcard origin CA cert: {domain}")
-            ensure_origin_ca_cert(cf, origin_certs, domain, cb)
+            ensure_origin_ca_cert(cf, verb, origin_certs, domain, cb)
 
 
 def get_zone_id(cf, zone_name):
@@ -131,17 +137,6 @@ def get_zone_id(cf, zone_name):
 
     logger.debug(f"cloudflare resolved zone {zone_name} -> {zone_id}")
     return zone_id
-
-        #
-        # if verb == constants.UP_VERB and not zone_found:
-        #     logger.debug(f"creating zone: {key}")
-        #     zone_info = cf.zones.post(data={'jump_start':False, 'name': key})
-        #     logger.info(f"cloudflare zone id: {zone_info['id']}")
-        # elif verb == constants.DOWN_VERB and zone_found:
-        #     logger.debug(f"deleting zone: {key}")
-        # else:
-        #     logger.debug(f"zone up-to-date: {key}")
-        # logger.debug(f"zone exists: {zone_found}")
 
 
 def do_cloudflare(filename, verb, data=None):
@@ -184,15 +179,3 @@ def do_cloudflare(filename, verb, data=None):
             logger.warning(f"missing key - moving on: {e}")
         else:
             raise e
-
-
-# def ensure(verb):
-#     params = {'name': databag.dns_zone_name, 'per_page':1}
-#     cf = getCf()
-#     up = verb == constants.UP_VERB
-#     zones = cf.zones.get(params=params)
-#     zone_found = len(zones) == 1
-#     if verb == constants.UP_VERB and zone_found:
-#         logger.info(f"security group {databag.dns_zone_name} already exists")
-#     elif verb == constants.UP_VERB and not zone_found:
-#         ensure_zone(databag.dns_zone_name)
