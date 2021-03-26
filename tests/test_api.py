@@ -22,6 +22,11 @@ def test_get_env_databag_parent():
     """processes top .env directory"""
     data = api.get_env_databag(root_dir, True, None)
     assert data.get("parent_value") == "top"
+    assert api.get_output_databag_filename() == os.path.join(
+        root_dir,
+        constants.ENV_DIR,
+        "output_databag.yaml"
+    )
 
 
 def test_get_env_databag_child():
@@ -30,6 +35,11 @@ def test_get_env_databag_child():
     assert data.get("new_value") == "new"
     assert data.get("parent_value") == "override"
     assert data.get("common_value") == "common"
+    assert api.get_output_databag_filename() == os.path.join(
+        root_dir,
+        constants.ENV_DIR,
+        "dev/output_databag.yaml"
+    )
 
 
 def test_get_env_databag_output():
@@ -37,6 +47,11 @@ def test_get_env_databag_output():
     data = api.get_env_databag(root_dir, True, "prod")
     assert data.get("prod_value") == "prod"
     assert data.get("common_value") == "common"
+    assert api.get_output_databag_filename() == os.path.join(
+        root_dir,
+        constants.ENV_DIR,
+        "prod/output_databag.yaml"
+    )
 
 
 def test_deep_nested_env_databag():
@@ -46,6 +61,11 @@ def test_deep_nested_env_databag():
     assert data.get("parent_value") == "override"
     assert data.get("common_value") == "common"
     assert data.get("special_value") == "special"
+    assert api.get_output_databag_filename() == os.path.join(
+        root_dir,
+        constants.ENV_DIR,
+        "dev/special/output_databag.yaml"
+    )
 
 
 def test_deep_nested_env_no_merge_databag():
@@ -55,6 +75,11 @@ def test_deep_nested_env_no_merge_databag():
     assert data.get("new_value") is None
     assert data.get("common_value") is None
     assert data.get("special_value") == "special"
+    assert api.get_output_databag_filename() == os.path.join(
+        root_dir,
+        constants.ENV_DIR,
+        "dev/special/output_databag.yaml"
+    )
 
 
 def test_databag_default_values():
