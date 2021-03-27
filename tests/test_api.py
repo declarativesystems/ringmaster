@@ -27,7 +27,7 @@ def test_get_env_databag_parent():
         constants.ENV_DIR,
         "output_databag.yaml"
     )
-    assert data.get("env") is None
+    assert data.get("env_name") is None
 
 
 def test_get_env_databag_child():
@@ -41,7 +41,7 @@ def test_get_env_databag_child():
         constants.ENV_DIR,
         "dev/output_databag.yaml"
     )
-    assert data.get("env") == "dev"
+    assert data.get("env_name") == "dev"
 
 
 def test_get_env_databag_output():
@@ -54,7 +54,7 @@ def test_get_env_databag_output():
         constants.ENV_DIR,
         "prod/output_databag.yaml"
     )
-    assert data.get("env") == "prod"
+    assert data.get("env_name") == "prod"
 
 
 def test_deep_nested_env_databag():
@@ -69,7 +69,7 @@ def test_deep_nested_env_databag():
         constants.ENV_DIR,
         "dev/special/output_databag.yaml"
     )
-    assert data.get("env") == "dev/special"
+    assert data.get("env_name") == "dev/special"
 
 
 
