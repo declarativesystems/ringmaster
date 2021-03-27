@@ -23,7 +23,7 @@ from halo import Halo
 import hashlib
 import pathlib
 import base64
-from jinja2 import Template, StrictUndefined
+from jinja2 import Environment, Template, StrictUndefined
 from jinja2.exceptions import UndefinedError
 
 
@@ -118,8 +118,10 @@ def base64encode(string):
 
 def substitute_placeholders_from_memory_to_memory(raw, verb, data):
     """replace all variables placeholders list of lines and return the result"""
-    template = Template(raw, undefined=StrictUndefined, keep_trailing_newline=True)
-
+    jinja_env = Environment(undefined=StrictUndefined, keep_trailing_newline=True)
+    # compatible name with Ansible filters
+    jinja_env.filters['b64encode'] = base64encode
+    template = jinja_env.from_string(raw)
     # add `env` key with contents of environment
     data_with_env = {**data, "env": os.environ.copy()}
 

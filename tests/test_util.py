@@ -47,6 +47,17 @@ def test_resolve_replacement_token():
         data
     )
 
+def test_filter_base64():
+    """test the |b64encode filter"""
+    data = {
+        "atoken": "avalue",
+    }
+    assert util.substitute_placeholders_from_memory_to_memory(
+        "{{atoken|b64encode}}",
+        ringmaster.constants.UP_VERB,
+        data
+    ) == util.base64encode(data["atoken"])
+
 
 def test_resolve_env():
     value = "avalue"
