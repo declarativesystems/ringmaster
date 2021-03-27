@@ -597,6 +597,9 @@ def do_secrets_manager(filename, verb, data):
     for secret in config.get("secrets", []):
         ensure_secret(data, verb, secret)
 
+    # munged secrets files must not be left on disk
+    logger.debug(f"delete file that may contain secrets: {processed_file}")
+    os.unlink(processed_file)
 
 def check_requirements():
     eksctl_version = subprocess.check_output(['eksctl', 'version'])
