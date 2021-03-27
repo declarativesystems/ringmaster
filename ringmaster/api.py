@@ -378,6 +378,7 @@ def get_env_databag(root_dir, merge, env_name):
         data.update(load_databag(target_databag_file))
 
     data.update(init_databag())
+    data["env"] = env_name
     return data
 
 
