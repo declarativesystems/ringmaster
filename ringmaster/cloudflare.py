@@ -158,20 +158,22 @@ def do_cloudflare(filename, verb, data=None):
 
         # callback to run when a certificate has been created
         # for now, always creates an AWS secret
-        def cb(verb, hostname, certificate_data, private_key_data):
+        def cb(_verb, hostname, certificate_data, private_key_data):
             secret_string = json.dumps({
                     "tls.crt": certificate_data,
                     "tls.key": private_key_data,
                 }
             )
-
             secret = {
                 "name": f"{prefix}tls-{hostname.replace('.', '-')}",
-                "value": secret_string
+                "value": secret_string,
             }
 
-            # make the secret..
-            aws.ensure_secret(data, verb, secret)
+            if (_verb == constants.UP_VERB and certificate_data and private_key_data) \
+                    or _verb == constants.DOWN_VERB:
+                aws.ensure_secret(data, _verb, secret)
+            else:
+                logger.info(f"[cloudflare-aws-callback] no update required for: {hostname}")
 
         origin_ca_certs(verb, yaml_data, cb)
     # except RuntimeError as e:
