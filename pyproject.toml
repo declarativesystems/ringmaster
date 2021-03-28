@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "ringmaster.show"
-version = "0.2.4+7c24651"
+version = "0.2.4+af2948b"
 description = "The world is a circus and you are the ringmaster!"
 authors = ["Geoff Williams <geoff@declarativesystems.com>"]
 license = "Apache 2.0"
