@@ -212,7 +212,13 @@ def do_helm(filename, verb, data=None):
                         cmd.append("--set")
                         cmd.append(setting)
                 cmd += config.get("options", [])
-
+                version = config.get("version")
+                if version:
+                    cmd += ["--version", version]
+                else:
+                    logger.warning(f"recommending versioning helm chart in {filename}")
+                cmd += config.get("options", [])
+            util.run_cmd(["helm", "repo", "update"])
             util.run_cmd(cmd)
         else:
             raise RuntimeError(f"helm - invalid verb {verb}")
