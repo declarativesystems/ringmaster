@@ -111,14 +111,7 @@ def ensure_origin_ca_cert(cf, verb, origin_certs, hostname, cb):
 
 
 # walkthru: https://blog.cloudflare.com/cloudflare-ca-encryption-origin/
-def origin_ca_certs(verb, zone_data, cb):
-    cf = get_cf()
-    zone_name = zone_data["zone_name"]
-    zone_id = get_zone_id(cf, zone_name)
-
-    if not zone_id:
-        raise RuntimeError("zone {data['zone_name']} not visible in cloudflare! - check setup/permissions")
-
+def origin_ca_certs(cf, zone_id, verb, zone_data, cb):
     # create each requested cert (if stack is going down just delete
     # everything to avoid creating orphans
     certs_to_ensure = zone_data.get("origin_ca_certs", [])
@@ -138,11 +131,28 @@ def get_zone_id(cf, zone_name):
     try:
         zone_id = zones[0]['id']
     except KeyError:
-        zone_id = False
+        raise RuntimeError(f"zone {zone_name} not visible in cloudflare! - check setup/permissions")
 
     logger.debug(f"cloudflare resolved zone {zone_name} -> {zone_id}")
     return zone_id
 
+
+def zone_settings(cf, zone_id, verb, yaml_data):
+    """zone-wide cloudflare settings (strict mode ssl)"""
+
+    # list of dict -> dict
+    if verb == constants.UP_VERB:
+        settings_list_of_dict = cf.zones.settings.get(zone_id)
+        settings_dict = {item['id']: item["value"] for item in settings_list_of_dict}
+        logger.debug(f"settings for zone_id {zone_id}: {settings_dict}")
+        for key, value in yaml_data.get("settings", {}).items():
+            if settings_dict.get(key) == value:
+                logger.debug(f"up-to-date: {key}=>{value}")
+            else:
+                logger.debug(f"setting: {key}=>{value}")
+                getattr(cf.zones.settings, key).patch(zone_id, data={"value": value})
+    else:
+        logger.info("skipping cloudformation zone settings")
 
 def do_cloudflare(filename, verb, data=None):
     logger.info(f"cloudflare: {filename}")
@@ -175,7 +185,12 @@ def do_cloudflare(filename, verb, data=None):
             else:
                 logger.info(f"[cloudflare-aws-callback] no update required for: {hostname}")
 
-        origin_ca_certs(verb, yaml_data, cb)
+        # lookup zone id now as needed everywhere
+        cf = get_cf()
+        zone_id = get_zone_id(cf, yaml_data["zone_name"])
+
+        origin_ca_certs(cf, zone_id, verb, yaml_data, cb)
+        zone_settings(cf, zone_id, verb, yaml_data)
     # except RuntimeError as e:
     #     if verb == constants.DOWN_VERB:
     #         logger.warning(f"kubectl error - moving on: {e}")
