@@ -41,7 +41,7 @@ def test_origin_ca_list_contains_hostname():
     target_hostname = "example.com"
 
     def hostname_filter(data):
-        return cf.origin_ca_list_contains_hostname(data, target_hostname)
+        return cf.list_contains_dict_value(data, "hostnames", target_hostname)
 
     assert len(list(filter(hostname_filter, testdata_origin_ca_match))) == 1
     assert len(list(filter(hostname_filter, testdata_origin_ca_no_match))) == 0

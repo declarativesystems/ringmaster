@@ -36,10 +36,11 @@ def get_cf():
     return CloudFlare.CloudFlare()
 
 
-def origin_ca_list_contains_hostname(data, target):
+def list_contains_dict_value(data, key, target):
     found = False
-    for hostname in data.get("hostnames", []):
-        if re.search(f"^{target}$", hostname):
+    logger.debug(f"filtering list for dict value: {key}=={target}")
+    for hostname in data.get(key, []):
+        if re.search(f"^{re.escape(target)}$", hostname):
             found = True
             break
 
@@ -74,7 +75,7 @@ def ensure_origin_ca_cert(cf, verb, origin_certs, hostname, cb):
     """create origin CA cert for `domain` if needed"""
 
     def hostname_filter(data):
-        return origin_ca_list_contains_hostname(data, hostname)
+        return list_contains_dict_value(data, "hostnames", hostname)
     pass
 
     origin_ca_cert = list(filter(hostname_filter, origin_certs))
@@ -154,6 +155,37 @@ def zone_settings(cf, zone_id, verb, yaml_data):
     else:
         logger.info("skipping cloudformation zone settings")
 
+
+def edge_certs(cf, zone_id, verb, yaml_data):
+    """create or delete the named edge certificates. Edge certs are 100%
+    managed by cloudflare so the orgin never knows about or sees them"""
+    certs = cf.zones.ssl.certificate_packs.get(zone_id)
+
+    for hostname in yaml_data.get("edge_certs", []):
+        logger.debug(f"edge cert: {hostname}")
+
+        def hostname_filter(data):
+            return list_contains_dict_value(data, "hosts", hostname)
+        pass
+
+        issued = list(filter(hostname_filter, certs))
+        if verb == constants.UP_VERB and not issued:
+            logger.info(f"[cloudflare] creating edge certificate: {hostname}")
+            cf.zones.ssl.certificate_packs.order.post(zone_id, data={
+                "type": "advanced",
+                "hosts": [yaml_data["zone_name"], hostname],
+                "validation_method": "txt",
+                "validity_days": 365,
+                "certificate_authority": "digicert",
+            })
+        elif verb == constants.DOWN_VERB and issued:
+            cert_id = issued[0]["id"]
+            logger.info(f"[cloudflare] deleting edge certificate: {hostname}/{cert_id}")
+            cf.zones.ssl.certificate_packs.delete(zone_id, cert_id)
+        else:
+            logger.info(constants.MSG_UP_TO_DATE)
+
+
 def do_cloudflare(filename, verb, data=None):
     logger.info(f"cloudflare: {filename}")
 
@@ -190,6 +222,7 @@ def do_cloudflare(filename, verb, data=None):
         zone_id = get_zone_id(cf, yaml_data["zone_name"])
 
         origin_ca_certs(cf, zone_id, verb, yaml_data, cb)
+        edge_certs(cf, zone_id, verb, yaml_data)
         zone_settings(cf, zone_id, verb, yaml_data)
     # except RuntimeError as e:
     #     if verb == constants.DOWN_VERB:
