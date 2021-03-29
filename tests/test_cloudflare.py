@@ -7,6 +7,14 @@ testdata_origin_ca_match = [
         "example.com",
         "*.example.com"
       ],
+    },
+
+    # should be left alone
+    {
+        "hostnames": [
+            "foo.example.com",
+            "*.foo.example.com"
+        ],
     }
 ]
 
@@ -16,6 +24,14 @@ testdata_origin_ca_no_match = [
         "foo.com",
         "*.foo.com"
       ],
+    },
+
+    # should be left alone
+    {
+        "hostnames": [
+            "foo.example.com",
+            "*.foo.example.com"
+        ],
     }
 ]
 
@@ -29,6 +45,7 @@ def test_origin_ca_list_contains_hostname():
 
     assert len(list(filter(hostname_filter, testdata_origin_ca_match))) == 1
     assert len(list(filter(hostname_filter, testdata_origin_ca_no_match))) == 0
+
 
 def test_csr():
     csr, private_key = cf.create_csr("foo.com")

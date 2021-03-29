@@ -39,7 +39,7 @@ def get_cf():
 def origin_ca_list_contains_hostname(data, target):
     found = False
     for hostname in data.get("hostnames", []):
-        if re.search(target, hostname):
+        if re.search(f"^{target}$", hostname):
             found = True
             break
 
