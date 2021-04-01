@@ -36,24 +36,6 @@ ERROR_MISSING = r"does not exist"
 ERROR_NO_SUCH_ENTITY = r"NoSuchEntity"
 
 
-def aws_init():
-    # copy files in res/aws to project dir
-    if os.path.exists(os.path.expanduser(constants.AWS_USER_TEMPLATE_DIR)):
-        source_dir = os.path.expanduser(constants.AWS_USER_TEMPLATE_DIR)
-    else:
-        source_dir = os.path.join(
-            os.path.dirname(
-                os.path.realpath(__file__)
-            ),
-            constants.AWS_TEMPLATE_DIR
-        )
-    logger.info(f"installing templates from {source_dir}...")
-
-    # shutils.copytree doesnt work until python 3.8 as need to overwrite dest
-    # TIL: https://askubuntu.com/a/86891/594199
-    util.run_cmd(["cp", "-a", f"{source_dir}/.", "."])
-
-
 def route_table_for_subnet(ec2, subnet_id):
     # get the route tables
     logger.debug(f"looking describe_route_table subnet_id:{subnet_id}")
@@ -271,11 +253,14 @@ def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
 # practice/quickstart files...
 def do_remote_cloudformation(filename, verb, data):
     # local file contains a link to the S3 hosted cloudformation
-    with open(filename) as f:
-        config = yaml.safe_load(f)
+    config = util.read_yaml_file(filename)
 
     remote = config["remote"]
-    local_file = os.path.join(os.path.dirname(filename), config["local_file"])
+    local_file = os.path.join(
+        constants.PROCESSED_DIR,
+        os.path.dirname(filename),
+        config["local_file"]
+    )
 
     # download the remote file so that:
     #   a) we can look at it
@@ -588,9 +573,9 @@ def ensure_secret(data, verb, secret):
 # `secret_id` - The identifier of the secret whose details you want to
 # retrieve. You can specify either the Amazon Resource Name (ARN) or the
 # friendly name of the secret.
-def do_secrets_manager(filename, verb, data):
+def do_secrets_manager(working_dir, filename, verb, data):
     logger.info(f"secretsmanager: {filename}")
-    processed_file = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
+    processed_file = util.substitute_placeholders_from_file_to_file(working_dir, filename, "#", verb, data)
     with open(processed_file) as f:
         config = yaml.safe_load(f)
 
@@ -614,9 +599,9 @@ def check_requirements():
     logger.info(f"helm: ${kubectl_version}")
 
 
-def do_eksctl(filename, verb, data):
+def do_eksctl(working_dir, filename, verb, data):
     logger.info(f"eksctl: ${filename}")
-    processed_filename = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
+    processed_filename = util.substitute_placeholders_from_file_to_file(working_dir, filename, "#", verb, data)
     with open(processed_filename) as f:
         config = yaml.safe_load(f)
 

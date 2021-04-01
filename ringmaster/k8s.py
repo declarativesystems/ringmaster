@@ -22,11 +22,11 @@ from ringmaster import constants
 import ringmaster.util as util
 import re
 
-def copy_kustomization_files(root_dir, target_dir):
 
+def copy_kustomization_files(root_dir, target_dir):
+    """Copy the required Kustomization files into """
     kustomization_file = os.path.join(root_dir, constants.PATTERN_KUSTOMIZATION_FILE)
-    with open(kustomization_file) as f:
-        kustomization_data = yaml.safe_load(f)
+    kustomization_data = util.read_yaml_file(kustomization_file)
 
     # kustomization.yaml
     Path(target_dir).mkdir(parents=True, exist_ok=True)
@@ -62,6 +62,7 @@ def copy_kustomization_files(root_dir, target_dir):
         dest_file = os.path.join(target_dir, patch_file)
         logger.debug(f"copy {source_file} {dest_file}")
         shutil.copy(source_file, dest_file)
+
 
 def check_kubectl_session():
     """check kubectl connected to cluster before running commands"""
@@ -103,12 +104,18 @@ def run_kubectl(verb, flag, path, data):
         raise RuntimeError("kubectl not logged in - context is not set")
 
 
-def do_kubectl(filename, verb, data=None):
+def do_kubectl(working_dir, filename, verb, data=None):
     # substitute ${...} variables from databag, bomb out if any missing
     logger.info(f"kubectl: {filename}")
 
     try:
-        processed_file = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
+        processed_file = util.substitute_placeholders_from_file_to_file(
+            working_dir,
+            filename,
+            "#",
+            verb,
+            data
+        )
         logger.debug(f"kubectl processed file: {processed_file}")
 
         run_kubectl(verb, "-f", processed_file, data)
@@ -154,18 +161,29 @@ def helm_repos(base_cmd, config, filename):
         logger.warning(f"helm - no helm repos specified in {filename}")
 
 
-def do_helm(filename, verb, data=None):
+def do_helm(working_dir, filename, verb, data=None):
     logger.info(f"helm: {filename}")
 
     # settings for helm...
-    processed_filename = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
-    with open(processed_filename) as f:
-        config = yaml.safe_load(f)
+    processed_filename = util.substitute_placeholders_from_file_to_file(
+        working_dir,
+        filename,
+        "#",
+        verb,
+        data
+    )
+    config = util.read_yaml_file(processed_filename)
 
     # if there is an adjacent `values.yaml` file, process it for substitutions and use it
     values_yaml = os.path.join(os.path.dirname(filename), "values.yaml")
     if os.path.exists(values_yaml):
-        processed_values_file = util.substitute_placeholders_from_file_to_file(values_yaml, "#", verb, data)
+        processed_values_file = util.substitute_placeholders_from_file_to_file(
+            working_dir,
+            values_yaml,
+            "#",
+            verb,
+            data
+        )
         logger.debug(f"helm - values: {processed_values_file}")
     else:
         processed_values_file = False
@@ -304,8 +322,7 @@ def do_secret_kubectl(filename, verb, data):
 
         # step 5 - secret completed - save it somewhere, kubectl, delete
         _, secret_file = tempfile.mkstemp(suffix=".yaml", prefix="ringmaster")
-        with open(secret_file, 'w') as outfile:
-            yaml.dump(yaml_data, outfile)
+        util.save_yaml_file(secret_file, yaml_data)
 
         logger.debug("secret_kubectl - creating secret with kubectl")
 

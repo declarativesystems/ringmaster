@@ -186,14 +186,19 @@ def edge_certs(cf, zone_id, verb, yaml_data):
             logger.info(constants.MSG_UP_TO_DATE)
 
 
-def do_cloudflare(filename, verb, data=None):
+def do_cloudflare(working_dir, filename, verb, data=None):
     logger.info(f"cloudflare: {filename}")
 
     try:
-        processed_file = util.substitute_placeholders_from_file_to_file(filename, "#", verb, data)
-        with open(processed_file) as f:
-            yaml_data = yaml.safe_load(f)
-            logger.debug(f"cloudflare file processed OK")
+        processed_file = util.substitute_placeholders_from_file_to_file(
+            working_dir,
+            filename,
+            "#",
+            verb,
+            data
+        )
+        yaml_data = util.read_yaml_file(processed_file)
+        logger.debug(f"cloudflare file processed OK")
 
         prefix = yaml_data.get("aws").get("secrets_manager_prefix") or ""
         logger.debug(f"aws secretsmanager prefix: {prefix}")

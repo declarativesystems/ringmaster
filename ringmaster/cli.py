@@ -39,6 +39,7 @@ from docopt import docopt
 import ringmaster.api as api
 import ringmaster.version as version
 import ringmaster.constants as constants
+import os
 
 debug = False
 
@@ -81,14 +82,15 @@ def main():
         else:
             raise RuntimeError("one of (up|down|get) is required")
 
+        working_dir = os.getcwd()
         if arguments["get"]:
             api.get(arguments["<dir>"], arguments["<url>"])
         elif arguments["metadata"]:
             api.write_metadata(arguments["<dir>"], arguments.get("--include", []))
         elif arguments["<dir>"]:
-            api.run_dir(arguments["<dir>"], merge, env_name, arguments['--start'], verb)
+            api.run_dir(working_dir, arguments["<dir>"], merge, env_name, arguments['--start'], verb)
         elif arguments["--run"]:
-            api.run(arguments['<filename>'], merge, env_name, verb)
+            api.run(working_dir, arguments['<filename>'], merge, env_name, verb)
         else:
             raise RuntimeError("one of <dir> or --run expected")
 

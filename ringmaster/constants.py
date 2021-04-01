@@ -68,3 +68,6 @@ DEFAULT_DATABAG = {
     "up_verb": UP_VERB,
     "down_verb": DOWN_VERB,
 }
+
+PROCESSED_DIR = ".processed"
+DATABAG_ENV_KEY = "env_name"

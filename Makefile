@@ -26,7 +26,7 @@ example_checksums:
 	ringmaster metadata examples/0260-ambassador --include values.yaml
 
 test: poetry_install
-	poetry run pytest
+	poetry run pytest --cov=ringmaster
 
 dist: poetry_install patch_version test
 	poetry build

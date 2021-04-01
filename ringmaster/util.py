@@ -25,6 +25,8 @@ import pathlib
 import base64
 from jinja2 import Environment, Template, StrictUndefined
 from jinja2.exceptions import UndefinedError
+import yaml
+import pathlib
 
 
 def walk(data, parent_name=None):
@@ -151,31 +153,44 @@ def substitute_placeholders_from_file_to_memory(filename, verb, data):
     return buffer
 
 
-def substitute_placeholders_from_file_to_file(filename, comment_delim, verb, data, processed_file=None):
-    """replace all variables placeholders in filename, return path to substituted file"""
-    filename_no_extension, file_extension = os.path.splitext(filename)
-    processed_file = processed_file if processed_file else filename_no_extension + ".processed" + file_extension
+def get_processed_filename(working_dir, input_filename, env_name):
+    """Return the filename where we should save the processed version of
+    `input_filename`"""
+    if input_filename.startswith("/"):
+        raise RuntimeError(f"input_filename must be a relative path, received: {input_filename}")
 
-    try:
-        if os.path.exists(filename):
-            with open(processed_file, "w") as out_file:
-                out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
-                with open(filename, "r") as in_file:
-                    out_file.write(
-                        substitute_placeholders_from_memory_to_memory(
-                            in_file.read(),
-                            verb,
-                            data,
-                        )
+    dirs = filter(
+        lambda x: x is not None,
+        [working_dir, constants.PROCESSED_DIR, env_name, input_filename]
+    )
+    processed_filename = os.path.join(*dirs)
+
+    if os.path.abspath(input_filename) == os.path.abspath(processed_filename):
+        raise RuntimeError(f"filename and processed_filename refer to the same file: {input_filename}")
+
+    return os.path.normpath(processed_filename)
+
+
+def substitute_placeholders_from_file_to_file(working_dir, filename, comment_delim, verb, data):
+    """replace all variables placeholders in filename, return path to substituted file"""
+    processed_file = get_processed_filename(working_dir, filename, data.get(constants.DATABAG_ENV_KEY))
+    logger.debug(f"substitute placeholders: {filename} => {processed_file}")
+    abs_filename = os.path.normpath(os.path.join(working_dir, filename))
+    if os.path.exists(abs_filename):
+        # create parent directory for processed file if needed
+        pathlib.Path(os.path.dirname(processed_file)).mkdir(parents=True, exist_ok=True)
+        with open(processed_file, "w") as out_file:
+            out_file.write(f"{comment_delim} This file was automatically generated from file: {filename}, do not edit!\n")
+            with open(abs_filename, "r") as in_file:
+                out_file.write(
+                    substitute_placeholders_from_memory_to_memory(
+                        in_file.read(),
+                        verb,
+                        data,
                     )
-        else:
-            raise RuntimeError(f"No such file: {filename}")
-    except UndefinedError as e:
-        if verb == constants.DOWN_VERB:
-            logger.warning(f"returning original file due to: {e}")
-            processed_file = filename
-        else:
-            raise e
+                )
+    else:
+        raise RuntimeError(f"No such file: {abs_filename}")
     return processed_file
 
 
@@ -212,3 +227,24 @@ def change_url_filename(url, filename):
         change_url_filename("https://blah", "something.txt") # https://blah/something.txt
     """
     return f"{url}/{filename}"
+
+
+def read_yaml_file(filename):
+    """read a yaml file and return it"""
+    with open(filename) as f:
+        yaml_data = yaml.safe_load(f)
+
+    if yaml_data is None:
+        raise RuntimeError(f"No YAML data in file: {filename}")
+
+    return yaml_data
+
+
+def save_yaml_file(filename, data, comment=None):
+    """save yaml data to file, creating any directories as needed"""
+    dirname = os.path.dirname(filename)
+    pathlib.Path(dirname).mkdir(parents=True, exist_ok=True)
+    with open(filename, "w") as f:
+        if comment:
+            f.write(comment)
+        yaml.dump(data, f)

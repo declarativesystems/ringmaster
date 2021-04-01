@@ -28,6 +28,7 @@ python-cloudflare = "^1.0.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.2"
+pytest-cov = "^2.11.1"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]

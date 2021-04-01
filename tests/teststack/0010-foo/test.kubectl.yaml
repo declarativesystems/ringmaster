@@ -1,0 +1,3 @@
+# substitution test
+---
+parent_value: {{ parent_value }}

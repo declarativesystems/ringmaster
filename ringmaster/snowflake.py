@@ -44,10 +44,14 @@ def test_connection(cs):
     one_row = cs.fetchone()
 
 
-def process_file_and_connect(filename, verb, data):
+def process_file_and_connect(working_dir, filename, verb, data):
     # process substitutions
     processed_file = util.substitute_placeholders_from_file_to_file(
-        filename, constants.COMMENT_SQL, verb, data
+        working_dir,
+        filename,
+        constants.COMMENT_SQL,
+        verb,
+        data
     )
     logger.debug(f"snowflake processed file: {processed_file}")
 
@@ -56,14 +60,14 @@ def process_file_and_connect(filename, verb, data):
     return cs, processed_file
 
 
-def do_snowflake_sql(filename, verb, data):
+def do_snowflake_sql(working_dir, filename, verb, data):
     """Run an SQL script with substition variables"""
     script_name = os.path.basename(filename)
     if (verb == constants.UP_VERB and script_name != constants.SNOWFLAKE_CLEANUP_FILENAME) or \
             (verb == constants.DOWN_VERB and script_name == constants.SNOWFLAKE_CLEANUP_FILENAME):
 
         logger.info(f"snowflake sql: {filename}")
-        cs, processed_file = process_file_and_connect(filename, verb, data)
+        cs, processed_file = process_file_and_connect(working_dir, filename, verb, data)
 
         # build up stmt line-by-line, when we find `;` execute stmt and
         # empty the variable for the next iteration
@@ -80,11 +84,16 @@ def do_snowflake_sql(filename, verb, data):
         logger.info(f"skippking snowflake: {filename}")
 
 
-def do_snowflake_query(filename, verb, data):
+def do_snowflake_query(working_dir, filename, verb, data):
     """Query snowflake for a single row of values, add each column to the databag"""
     if verb == constants.UP_VERB:
         logger.info(f"snowflake query: {filename}")
-        cs, processed_file = process_file_and_connect(filename, verb, data)
+        cs, processed_file = process_file_and_connect(
+            working_dir,
+            filename,
+            verb,
+            data
+        )
         extra_data = {}
 
         # load the entire processed file and run EACH STATEMENT
