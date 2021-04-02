@@ -1,0 +1,5 @@
+aws:
+  profile: "ringmaster-aws"
+  eks_cluster: "ringmaster-eks"
+snowflake:
+  profile: "ringmaster-snowflake"

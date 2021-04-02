@@ -48,15 +48,15 @@ debug = False
 def setup_logging(level, logger_name=None):
     logger_name = logger_name or __name__.split(".")[0]
     log_formats = {
-        "DEBUG": "{time} {level} {message}",
-        "INFO": "{message}",
+        "DEBUG": "{time}<level> {level} [{module}] {message}</level>",
+        "INFO": "<level>[{module}] {message}</level>",
     }
 
 
     # custom level for program output so it can be nicely colourised
     logger.remove()
     logger.debug(f"{logger_name} {level}")
-    logger.add(sys.stdout, format=log_formats[level], level=level)
+    logger.add(sys.stdout, colorize=True, format=log_formats[level], level=level)
     prog_level = logger.level("OUTPUT", no=25, color="<white><dim>", icon="🤡")
 
     logger.debug("====[debug mode enabled]====")
@@ -82,6 +82,7 @@ def main():
         else:
             raise RuntimeError("one of (up|down|get) is required")
 
+        api.system_info()
         working_dir = os.getcwd()
         if arguments["get"]:
             api.get(arguments["<dir>"], arguments["<url>"])

@@ -21,11 +21,9 @@ import snakecase
 import pathlib
 import ringmaster.util as util
 from ringmaster import constants as constants
-from cfn_tools import load_yaml, dump_yaml
+from cfn_tools import load_yaml
 import botocore.exceptions
 from halo import Halo
-import urllib
-import yaml
 from ringmaster.util import flatten_nested_dict
 
 # AWS/boto3 API error messages to look for. Use partial regex to protect
@@ -34,6 +32,35 @@ ERROR_UP_TO_DATE = r"No updates are to be performed"
 ERROR_AWS = r"encountered a terminal failure state"
 ERROR_MISSING = r"does not exist"
 ERROR_NO_SUCH_ENTITY = r"NoSuchEntity"
+
+
+def setup_connection(connection_settings):
+    profile_name = util.get_connection_profile(connection_settings, "aws")
+    os.environ["AWS_PROFILE"] = profile_name
+
+    # check named profile exists
+    try:
+        _ = boto3.Session(profile_name=profile_name)
+    except botocore.exceptions.ProfileNotFound:
+        raise RuntimeError(f"[AWS] No such profile: {profile_name} (aws configure --profile {profile_name})")
+
+
+def get_boto3_session():
+    """get a boto3 session configured with the requested profile or bomb out"""
+    # profile_name = util.get_connection_profile(connection, "aws")
+    # try:
+    #     session = boto3.Session(profile_name=profile_name)
+    # except botocore.exceptions.ProfileNotFound:
+    #     raise RuntimeError(f"[AWS] No such profile: {profile_name} (aws configure --profile {profile_name})")
+    # return session
+
+    return boto3.Session()
+
+
+def get_eksctl_cmd():
+    # profile_name = util.get_connection_profile(connection, "aws")
+    # return ["eksctl", "--profile", profile_name]
+    return ["eksctl"]
 
 
 def route_table_for_subnet(ec2, subnet_id):
@@ -55,13 +82,13 @@ def route_table_for_subnet(ec2, subnet_id):
     return route_table_id
 
 
-def eks_cluster_info(aws_region, cluster_name, data):
+def eks_cluster_info(cluster_name, data):
     sanity_check(data)
 
     # eksctl cluster info --> databag
     logger.debug("eks cluster info")
     eksctl_data = util.run_cmd_json(
-        ["eksctl", "get", "cluster", "--region", aws_region, cluster_name, "--output", "json"],
+        get_eksctl_cmd() + ["get", "cluster", cluster_name, "--output", "json"],
         data
     )
 
@@ -78,7 +105,7 @@ def eks_cluster_info(aws_region, cluster_name, data):
     #   + cluster_public_subnet_{n}
     #   + cluster_public_route_tables
     #   + cluster_public_route_table_{n}
-    ec2 = boto3.client('ec2', region_name=aws_region)
+    ec2 = get_boto3_session().client('ec2')
     try:
 
         # VPC CIDR block
@@ -155,7 +182,6 @@ def filename_to_stack_name(cloudformation_file):
         .replace(".yaml", "")
 
 
-
 def cloudformation_param(key, value):
     return {
         "ParameterKey": key,
@@ -223,7 +249,8 @@ def stack_exists(client, stack_name):
     return exists
 
 
-def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
+def cloudformation_outputs(client, stack_name, data):
+    prefixed_stack_name = get_prefixed_stack_name(stack_name, data)
     response = client.describe_stacks(
         StackName=prefixed_stack_name,
     )
@@ -251,7 +278,7 @@ def cloudformation_outputs(client, stack_name, prefixed_stack_name, data):
 # Cloudformation has a hard 51200 byte max file size. To work around this
 # files must be hosted on S3. This is an issue with the AWS best
 # practice/quickstart files...
-def do_remote_cloudformation(filename, verb, data):
+def do_remote_cloudformation(working_dir, filename, verb, data):
     # local file contains a link to the S3 hosted cloudformation
     config = util.read_yaml_file(filename)
 
@@ -273,7 +300,7 @@ def do_remote_cloudformation(filename, verb, data):
     cloudformation(stack_name, local_file, verb, data, template_url=remote)
 
 
-def do_local_cloudformation(filename, verb, data):
+def do_local_cloudformation(working_dir, filename, verb, data):
     logger.info(f"cloudformation {filename}")
     template_body = pathlib.Path(filename).read_text()
     stack_name = filename_to_stack_name(filename)
@@ -287,12 +314,16 @@ def do_local_cloudformation(filename, verb, data):
             raise e
 
 
+def get_prefixed_stack_name(stack_name, data):
+    return f"{data['name']}-{stack_name}"
+
+
 def cloudformation(stack_name, filename, verb, data, template_body=None, template_url=None):
     sanity_check(data)
 
-    prefixed_stack_name = f"{data['name']}-{stack_name}"
+    prefixed_stack_name = get_prefixed_stack_name(stack_name, data)
     params = stack_params(filename, data)
-    client = boto3.client('cloudformation', region_name=data["aws_region"])
+    client = get_boto3_session().client('cloudformation')
     exists = stack_exists(client, prefixed_stack_name)
 
     if template_body:
@@ -349,7 +380,7 @@ def cloudformation(stack_name, filename, verb, data, template_body=None, templat
 
     if act:
         logger.debug(
-            f"cloudformation stack:{prefixed_stack_name} file: {stack_name}"
+            f"cloudformation stack:{prefixed_stack_name} file: {filename}"
         )
 
         # do the deed...
@@ -384,16 +415,16 @@ def cloudformation(stack_name, filename, verb, data, template_body=None, templat
     # ...If we're still here our stack is up, grab all the cloudformation
     # outputs and add them to the databag
     if verb != constants.DOWN_VERB:
-        cloudformation_outputs(client, stack_name, prefixed_stack_name, data)
+        cloudformation_outputs(client, stack_name, data)
 
 
-def do_iam_policy(filename, verb, data):
+def do_iam_policy(working_dir, filename, verb, data):
     logger.info(f"AWS IAM policy: {filename}")
 
     basename = os.path.basename(filename)
     policy_name = basename[:-len(constants.PATTERN_AWS_IAM_POLICY)]
     policy_arn = f"arn:aws:iam::{data['aws_account_id']}:policy/{policy_name}"
-    client = boto3.client('iam', region_name=data["aws_region"])
+    client = get_boto3_session().client('iam')
 
     try:
         policy_exists = client.get_policy(PolicyArn=policy_arn)
@@ -453,13 +484,12 @@ def do_iam_policy(filename, verb, data):
         data.update(extra_data)
 
 
-def do_iam_role(filename, verb, data):
+def do_iam_role(working_dir, filename, verb, data):
     logger.info(f"AWS IAM role: {filename}")
 
     basename = os.path.basename(filename)
     name = basename[:-len(constants.PATTERN_AWS_IAM_ROLE)]
-    arn = f"arn:aws:iam::{data['aws_account_id']}:policy/{name}"
-    client = boto3.client('iam', region_name=data["aws_region"])
+    client = get_boto3_session().client('iam')
 
     try:
         exists = client.get_role(RoleName=name)
@@ -524,7 +554,7 @@ def secret_exists(client, secret_id):
 def update_secret(client, secret_id, secret_value, deleted):
     if deleted:
         logger.debug(f"Restoring deleted secret: {secret_id}")
-        response = client.restore_secret(
+        _ = client.restore_secret(
             SecretId=secret_id
         )
 
@@ -555,7 +585,7 @@ def delete_secret(client, secret_id):
 
 
 def ensure_secret(data, verb, secret):
-    client = boto3.client('secretsmanager', region_name=data["aws_region"])
+    client = get_boto3_session().client('secretsmanager')
 
     exists, deleted = secret_exists(client, secret["name"])
     if verb == constants.UP_VERB and exists:
@@ -576,8 +606,7 @@ def ensure_secret(data, verb, secret):
 def do_secrets_manager(working_dir, filename, verb, data):
     logger.info(f"secretsmanager: {filename}")
     processed_file = util.substitute_placeholders_from_file_to_file(working_dir, filename, "#", verb, data)
-    with open(processed_file) as f:
-        config = yaml.safe_load(f)
+    config = util.read_yaml_file(processed_file)
 
     for secret in config.get("secrets", []):
         ensure_secret(data, verb, secret)
@@ -586,35 +615,21 @@ def do_secrets_manager(working_dir, filename, verb, data):
     logger.debug(f"delete file that may contain secrets: {processed_file}")
     os.unlink(processed_file)
 
-def check_requirements():
-    eksctl_version = subprocess.check_output(['eksctl', 'version'])
-    aws_version = subprocess.check_output(['aws', '--version'])
-    helm_version = subprocess.check_output(['helm', 'version'])
-    kubectl_version = subprocess.check_output(["kubectl", "version", "--short"])
-
-    # TODO 1) bomb out on bad versions 2) option to skip bomb out
-    logger.info(f"eksctl: ${eksctl_version}")
-    logger.info(f"aws: ${aws_version}")
-    logger.info(f"helm: ${helm_version}")
-    logger.info(f"helm: ${kubectl_version}")
-
 
 def do_eksctl(working_dir, filename, verb, data):
     logger.info(f"eksctl: ${filename}")
     processed_filename = util.substitute_placeholders_from_file_to_file(working_dir, filename, "#", verb, data)
-    with open(processed_filename) as f:
-        config = yaml.safe_load(f)
+    config = util.read_yaml_file(processed_filename)
 
-    # eksctl needs region and cluster name - grab these well-known fields from
+    # eksctl needs cluster name - grab this well-known fields from
     # processed yaml file to avoid needing well-known keys in databag
     try:
-        aws_region = config["metadata"]["region"]
         cluster_name = config["metadata"]["name"]
     except KeyError as e:
         raise RuntimeError(f"eksctl file:{filename} missing required value {e}")
 
     try:
-        util.run_cmd(["eksctl", "get", "cluster", "-n", cluster_name, "--region", aws_region], data)
+        util.run_cmd(get_eksctl_cmd() + ["get", "cluster", "-n", cluster_name], data)
         exists = True
     except RuntimeError as e:
         logger.debug(f"cluster probably doesnt exist: {e}")
@@ -623,13 +638,21 @@ def do_eksctl(working_dir, filename, verb, data):
     if verb == constants.UP_VERB and exists:
         logger.info(constants.MSG_UP_TO_DATE)
     elif verb == constants.UP_VERB and not exists:
-        util.run_cmd(["eksctl", "create", "cluster", "-f", processed_filename], data)
+        util.run_cmd(get_eksctl_cmd() + ["create", "cluster", "-f", processed_filename], data)
     elif verb == constants.DOWN_VERB and exists:
-        util.run_cmd(["eksctl", "delete", "cluster", "-f", processed_filename], data)
+        util.run_cmd(get_eksctl_cmd() + ["delete", "cluster", "--name", cluster_name], data)
     elif verb == constants.DOWN_VERB and not exists:
         logger.info(constants.MSG_UP_TO_DATE)
     else:
         raise RuntimeError(f"eksctl - invalid verb: {verb}")
 
     if verb == constants.UP_VERB:
-        eks_cluster_info(aws_region, cluster_name, data)
+        eks_cluster_info(cluster_name, data)
+
+
+def eks_name_to_kubectl_context_id(iam_user, cluster_name, region):
+    return f"{iam_user}@{cluster_name}.{region}.eksctl.io"
+
+
+def boto3_version():
+    return boto3.__version__

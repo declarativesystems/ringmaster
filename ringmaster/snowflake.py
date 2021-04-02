@@ -19,21 +19,30 @@ import ringmaster.util as util
 import ringmaster.constants as constants
 
 SNOWFLAKE_CONFIG_FILE = "~/.ringmaster/snowflake.yaml"
+connection = None
+
+profile_data = None
+
+
+def setup_connection(connection_settings):
+    global profile_data
+
+    profile = util.get_connection_profile(connection_settings, "snowflake")
+    snowflake_config_file = os.path.expanduser(SNOWFLAKE_CONFIG_FILE)
+    if os.path.exists(snowflake_config_file):
+        config = util.read_yaml_file(snowflake_config_file)
+        profile_data = config.get(profile)
+    else:
+        raise RuntimeError(f"snowflake settings not found at: {snowflake_config_file}")
 
 
 def get_cursor(data):
-    snowflake_config_file = os.path.expanduser(SNOWFLAKE_CONFIG_FILE)
-    if os.path.exists(snowflake_config_file):
-        with open(snowflake_config_file) as f:
-            config = yaml.safe_load(f)
-        ctx = snowflake.connector.connect(**config["credentials"])
-        cs = ctx.cursor(snowflake.connector.DictCursor)
+    ctx = snowflake.connector.connect(**profile_data["credentials"])
+    cs = ctx.cursor(snowflake.connector.DictCursor)
 
-        # grab some convenince variables from snowflake settings
-        data["snowflake_account"] = config["credentials"]["account"]
-        data["snowflake_region"] = config["region"]
-    else:
-        raise RuntimeError(f"snowflake settings not found at: {snowflake_config_file}")
+    # grab some convenince variables from snowflake settings
+    data["snowflake_account"] = profile_data["credentials"]["account"]
+    data["snowflake_region"] = profile_data["region"]
 
     test_connection(cs)
     return cs
@@ -113,3 +122,7 @@ def do_snowflake_query(working_dir, filename, verb, data):
 
         logger.debug(f"query result - items: {len(extra_data)} values:{extra_data}")
         data.update(extra_data)
+
+
+def snowflake_connector_version():
+    return snowflake.connector.__version__

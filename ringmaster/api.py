@@ -23,8 +23,6 @@ import sys
 import tempfile
 from loguru import logger
 from ringmaster import constants as constants
-import ringmaster.solarwinds_papertrail as solarwinds_papertrail
-
 import ringmaster.k8s as k8s
 import ringmaster.aws as aws
 import ringmaster.snowflake as snowflake
@@ -43,7 +41,7 @@ metadata = {
 }
 
 # munged directory containing databag user supplied on the commandline
-databag_load_dir = None
+env_dir = None
 
 
 def init_databag():
@@ -56,7 +54,6 @@ def init_databag():
     return {
         constants.KEY_INTERMEDIATE_DATABAG: intermediate_databag_file,
         "debug": "debug" if debug else "",
-        "name": os.path.basename(os.getcwd()),
     }
 
 
@@ -88,7 +85,7 @@ def load_intermediate_databag(data):
         open(intermediate_databag_file, 'w').close()
 
 
-def do_bash_script(filename, verb, data):
+def do_bash_script(working_dir, filename, verb, data):
     # bash scripts
     logger.info(f"bash script: {filename}")
     logger.info(f"write JSON to file at ${constants.KEY_INTERMEDIATE_DATABAG} to add to databag")
@@ -99,7 +96,7 @@ def do_bash_script(filename, verb, data):
 
 # see
 # https://docs.python.org/3/library/importlib.html#importing-a-source-file-directly
-def do_ringmaster_python(filename, verb, data):
+def do_ringmaster_python(working_dir, filename, verb, data):
     logger.info(f"ringmaster python: {filename}")
     # /foo/bar/baz.py -> baz
     module_name, _ = os.path.splitext(os.path.basename(filename))
@@ -123,7 +120,6 @@ handlers = {
     constants.PATTERN_LOCAL_CLOUDFORMATION_FILE: aws.do_local_cloudformation,
     constants.PATTERN_REMOTE_CLOUDFORMATION_FILE: aws.do_remote_cloudformation,
     constants.PATTERN_KUBECTL_FILE: k8s.do_kubectl,
-    constants.PATTERN_SOLARWINDS_PAPERTRAIL_FILE: solarwinds_papertrail.do_papertrail,
     constants.PATTERN_KUSTOMIZATION_FILE: k8s.do_kustomizer,
     constants.PATTERN_RINGMASTER_PYTHON_FILE: do_ringmaster_python,
     constants.PATTERN_SNOWFLAKE_SQL: snowflake.do_snowflake_sql,
@@ -181,9 +177,41 @@ def do_stage(working_dir, data, stage, verb):
             save_output_databag(data)
 
 
+def system_info():
+    aws_version = util.run_cmd(["aws", "--version"]).strip()
+    eksctl_version = util.run_cmd(["eksctl", "version"]).strip()
+    kubectl_version = util.run_cmd(["kubectl", "version", "--short", "--client"]).strip()
+    helm_version = util.run_cmd(["helm", "version", "--short"])
+
+    message = util.process_res_template(
+        "system_info.txt",
+        aws_version=aws_version,
+        boto3_version=aws.boto3_version(),
+        cloudflare_version=cloudflare.cloudflare_version(),
+        eksctl_version=eksctl_version,
+        helm_version=helm_version,
+        kubectl_version=kubectl_version,
+        snowflake_connector_version=snowflake.snowflake_connector_version()
+    )
+
+    logger.info(message)
+
+
+def setup_connections():
+
+    connections = get_env_connections()
+    aws.setup_connection(connections.get("aws"))
+    snowflake.setup_connection(connections.get("snowflake"))
+    k8s.setup_connection(connections.get("k8s"))
+
+    # no connection info for cloudflare - you can only manage a DNS zone once
+    # so this will either work or it wont...
+
 def run(project_dir, filename, merge, env_name, verb):
     if os.path.exists(filename):
         data = get_env_databag(os.getcwd(),merge, env_name)
+        setup_connections()
+
         do_file(project_dir, filename, verb, data)
         save_output_databag(data)
     else:
@@ -218,6 +246,7 @@ def run_dir(working_dir, subdir, merge, env_name, start, verb):
         started = False
 
         data = get_env_databag(os.getcwd(), merge, env_name)
+        setup_connections()
 
         # for some reason the default order is reversed when using ranges so we
         # must always sort. If we are bringing down a stack, reverse the order
@@ -340,22 +369,42 @@ def write_metadata(directory, includes):
     util.save_yaml_file(metadata_file, metadata)
 
 
-def get_env_databag(root_dir, merge, env_name):
-    global databag_load_dir
+def get_env_dir(working_dir, env_name):
     env_dir_section = env_name if env_name else ""
+    dirs = list(
+        filter(
+            lambda x: x is not None,
+            [working_dir, constants.ENV_DIR, env_dir_section]
+        )
+    )
+    return os.path.join(*dirs)
+
+
+def get_env_connections():
+    """read `connections.yaml` for this environment"""
+    if not env_dir:
+        raise RuntimeError("env_dir not set yet, load databags first")
+
+    connections_yaml_filename = os.path.join(env_dir, constants.CONNECTIONS_YAML)
+    return util.read_yaml_file(connections_yaml_filename)
+
+
+def get_env_databag(working_dir, merge, env_name):
+    """read the databag for this `env_name` with optional merging of any
+    parent databags"""
+    global env_dir
 
     # deepest directory to load databag from, with optional merging
     # examples: .env, .env/prod, .env/prod/australia
-    databag_load_dir = os.path.join(root_dir, constants.ENV_DIR, env_dir_section)
+    env_dir = get_env_dir(working_dir, env_name)
 
     sequential_load_dirs = []
-    look_at_dir = databag_load_dir
+    look_at_dir = env_dir
     max_parents = 4
     depth = 0
-    logger.debug("root_dir={} env_dir={} databag_load_dir={}", root_dir, env_dir_section, databag_load_dir)
     if merge:
         # add parent directory until we get back to .env
-        while look_at_dir != root_dir:
+        while look_at_dir != working_dir:
             if depth > max_parents:
                 raise RuntimeError(f".env dir nested too deep! (limit: {max_parents+1}")
             sequential_load_dirs.append(look_at_dir)
@@ -363,7 +412,7 @@ def get_env_databag(root_dir, merge, env_name):
             depth += 1
         sequential_load_dirs.reverse()
     else:
-        sequential_load_dirs.append(databag_load_dir)
+        sequential_load_dirs.append(env_dir)
 
     logger.debug(f"sequential load dirs: {sequential_load_dirs}")
 
@@ -383,6 +432,6 @@ def get_env_databag(root_dir, merge, env_name):
 
 
 def get_output_databag_filename():
-    if not databag_load_dir:
+    if not env_dir:
         raise RuntimeError("databag_load_dir not set, databag not loaded yet")
-    return os.path.join(databag_load_dir, constants.OUTPUT_DATABAG_FILE)
+    return os.path.join(env_dir, constants.OUTPUT_DATABAG_FILE)

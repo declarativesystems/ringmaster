@@ -22,52 +22,29 @@ from ringmaster import constants
 import ringmaster.util as util
 import re
 
+kubectl_context = None
 
-def copy_kustomization_files(root_dir, target_dir):
-    """Copy the required Kustomization files into """
-    kustomization_file = os.path.join(root_dir, constants.PATTERN_KUSTOMIZATION_FILE)
-    kustomization_data = util.read_yaml_file(kustomization_file)
 
-    # kustomization.yaml
-    Path(target_dir).mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(
-        kustomization_file, os.path.join(target_dir, constants.PATTERN_KUSTOMIZATION_FILE))
-    # resources
-    for resource_file in kustomization_data.get("resources", []):
-        source_file = os.path.join(root_dir, resource_file)
-        dest_file = os.path.join(target_dir, resource_file)
-        dest_dir = os.path.dirname(dest_file)
-        logger.debug(f"mkdir {dest_dir}")
-        Path(dest_dir).mkdir(parents=True, exist_ok=True)
-        logger.info(f"saving kustomizer resource: {dest_file}")
-        logger.debug(f"copy {source_file} {dest_file}")
-        shutil.copyfile(source_file, dest_file)
+def setup_connection(connection_settings):
+    global kubectl_context
+    kubectl_context = util.get_connection_profile(connection_settings, "k8s")
+    logger.debug(f"k8s context set to: {kubectl_context}")
 
-    # bases
-    for base_res in kustomization_data.get("bases", []):
-        source_dir = os.path.join(root_dir, base_res)
-        dest_dir = os.path.join(target_dir, base_res)
 
-        # use copy - older python copytree cant copy files that exist in the
-        # destination
-        logger.debug(f"rmtree {dest_dir}")
-        shutil.rmtree(dest_dir, ignore_errors=True)
-        logger.debug(f"copytree {source_dir} {dest_dir}")
-        shutil.copytree(source_dir, dest_dir)
+def get_kubectl_cmd():
+    """get the kubectl command"""
+    return ["kubectl", "--context", kubectl_context]
 
-    # patches
-    for patch in kustomization_data.get("patchesJSON6902"):
-        patch_file = patch["path"]
-        source_file = os.path.join(root_dir, patch_file)
-        dest_file = os.path.join(target_dir, patch_file)
-        logger.debug(f"copy {source_file} {dest_file}")
-        shutil.copy(source_file, dest_file)
+
+def get_helm_cmd():
+    """get the kubectl command to run with context set or bomb out"""
+    return ["helm", "--kube-context", kubectl_context]
 
 
 def check_kubectl_session():
     """check kubectl connected to cluster before running commands"""
     try:
-        run_cmd("kubectl config current-context")
+        run_cmd(get_kubectl_cmd() + ["version", "--client", "false"])
         connected = True
     except RuntimeError:
         connected = False
@@ -79,15 +56,15 @@ def run_kubectl(verb, flag, path, data):
         data = {}
 
     if verb == constants.UP_VERB:
-        kubectl_cmd = "apply"
+        action = "apply"
     elif verb == constants.DOWN_VERB:
-        kubectl_cmd = "delete"
+        action = "delete"
     else:
         raise ValueError(f"invalid verb: {verb}")
 
     if check_kubectl_session():
         # --force is to recreate any immutable resources we touched
-        cmd = ["kubectl", kubectl_cmd, "--force", flag, path]
+        cmd = get_kubectl_cmd() + [action, "--force", flag, path]
         if data.get("debug"):
             cmd.append("-v=2")
 
@@ -131,7 +108,7 @@ def do_kubectl(working_dir, filename, verb, data=None):
             raise e
 
 
-def do_kustomizer(filename, verb, data=None):
+def do_kustomizer(working_dir, filename, verb, data=None):
     logger.info(f"kustomizer: {filename}")
     sources_dir = os.path.dirname(filename)
     try:
@@ -195,7 +172,7 @@ def do_helm(working_dir, filename, verb, data=None):
     else:
         raise RuntimeError(f"helm - invalid verb: {verb}")
 
-    base_cmd = ["helm"]
+    base_cmd = get_helm_cmd()
     if data.get("debug"):
         base_cmd.append("--debug")
 
@@ -249,7 +226,8 @@ def do_helm(working_dir, filename, verb, data=None):
         else:
             raise e
 
-def do_secret_kubectl(filename, verb, data):
+
+def do_secret_kubectl(working_dir, filename, verb, data):
     """create or delete a secret from a kubectl template file. This results in
     calling the k8s api directly - no processed file (which would contain the
     secret...) is created

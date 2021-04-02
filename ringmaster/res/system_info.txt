@@ -1,0 +1,24 @@
+         _
+       _[_]_
+       _(_)______.-'`-.
+      /, >< ,----'     `-._.-'*
+      \\|::|  Welcome to the Circus
+        |/\|  We already got enough Clowns,
+        ||||  You got any experiance with
+        ||||  Being shot from a canon??
+     __(_/\_)
+    /`-..__.,-'\
+   /   __/\__   \
+   `._ \    / _.'MJP
+      ``|/\|-'
+***************************************************************************
+System Information
+
+    aws: {{ aws_version }}
+    boto3: {{ boto3_version }}
+    cloudflare: {{ cloudflare_version }}
+    eksctl: {{ eksctl_version }}
+    helm: {{ helm_version }}
+    kubectl: {{ kubectl_version }}
+    snowflake connector: {{ snowflake_connector_version }}
+***************************************************************************

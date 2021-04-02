@@ -21,9 +21,8 @@ import json
 from contextlib import ExitStack
 from halo import Halo
 import hashlib
-import pathlib
 import base64
-from jinja2 import Environment, Template, StrictUndefined
+from jinja2 import Environment, Template, StrictUndefined, Undefined
 from jinja2.exceptions import UndefinedError
 import yaml
 import pathlib
@@ -118,9 +117,33 @@ def base64encode(string):
     return base64_bytes.decode('ascii')
 
 
+def get_res_filename(filename):
+    return os.path.join(
+        os.path.dirname(
+            os.path.realpath(__file__)
+        ),
+        "res",
+        filename
+    )
+
+
+def get_res_file_content(filename):
+    with open(get_res_filename(filename), "r") as f:
+        return f.read()
+
+
+def process_res_template(filename, **data):
+    """process a template from the /res directory and return it as a string"""
+    template = Template(get_res_file_content(filename))
+    return template.render(**data)
+
+
 def substitute_placeholders_from_memory_to_memory(raw, verb, data):
     """replace all variables placeholders list of lines and return the result"""
-    jinja_env = Environment(undefined=StrictUndefined, keep_trailing_newline=True)
+
+    # allow missing variables in templates if we are going down
+    undefined = StrictUndefined if verb == constants.UP_VERB else Undefined
+    jinja_env = Environment(undefined=undefined, keep_trailing_newline=True)
     # compatible name with Ansible filters
     jinja_env.filters['b64encode'] = base64encode
     template = jinja_env.from_string(raw)
@@ -248,3 +271,11 @@ def save_yaml_file(filename, data, comment=None):
         if comment:
             f.write(comment)
         yaml.dump(data, f)
+
+
+def get_connection_profile(connection, caller_name):
+    """get the kubectl context to run with context set or bomb out"""
+    if not connection.get(constants.PROFILE):
+        raise RuntimeError(f"No profile set for {caller_name}")
+
+    return connection[constants.PROFILE]

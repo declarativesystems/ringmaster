@@ -239,3 +239,7 @@ def do_cloudflare(working_dir, filename, verb, data=None):
             logger.warning(f"missing key - moving on: {e}")
         else:
             raise e
+
+
+def cloudflare_version():
+    return CloudFlare.__version__

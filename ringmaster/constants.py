@@ -67,7 +67,10 @@ DEFAULT_DATABAG = {
     "msg_up_to_date": MSG_UP_TO_DATE,
     "up_verb": UP_VERB,
     "down_verb": DOWN_VERB,
+    "name": os.path.basename(os.getcwd()),
 }
 
 PROCESSED_DIR = ".processed"
 DATABAG_ENV_KEY = "env_name"
+CONNECTIONS_YAML = "connections.yaml"
+PROFILE = "profile"
