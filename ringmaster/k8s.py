@@ -44,7 +44,7 @@ def get_helm_cmd():
 def check_kubectl_session():
     """check kubectl connected to cluster before running commands"""
     try:
-        run_cmd(get_kubectl_cmd() + ["version", "--client", "false"])
+        run_cmd(get_kubectl_cmd() + ["get", "svc"])
         connected = True
     except RuntimeError:
         connected = False
