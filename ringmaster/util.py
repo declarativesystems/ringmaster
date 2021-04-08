@@ -67,6 +67,12 @@ def run_cmd_json(cmd, data=None):
     return json.loads(string)
 
 
+def is_ci():
+    """True if we are running under CI, as indicated by the well-known CI
+    environment variable"""
+    return "CI" in os.environ
+
+
 def run_cmd(cmd, data=None):
     if not data:
         data = {}
@@ -76,8 +82,11 @@ def run_cmd(cmd, data=None):
     logger.debug(f"running command: {cmd}")
     debug = data.get("debug", False)
     with ExitStack() as stack:
-        if not debug:
-            stack.enter_context(Halo(text=f"Running {cmd}", spinner='dots'))
+        message = f"Running {cmd}"
+        if not debug and not is_ci():
+            stack.enter_context(Halo(text=message, spinner='dots'))
+        else:
+            logger.info(message)
 
         with subprocess.Popen(cmd,
                               stdout=subprocess.PIPE,

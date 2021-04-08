@@ -15,6 +15,7 @@ import re
 import subprocess
 import os
 import json
+from contextlib import ExitStack
 from loguru import logger
 import boto3
 import snakecase
@@ -384,8 +385,14 @@ def cloudformation(stack_name, filename, verb, data, template_body=None, templat
         )
 
         # do the deed...
+        debug = data.get("debug", False)
         try:
-            with Halo(text=f"Cloudformation {stack_name}", spinner='dots'):
+            with ExitStack() as stack:
+                message = f"Cloudformation {stack_name}"
+                if not debug and not util.is_ci():
+                    stack.enter_context(Halo(text=message, spinner='dots'))
+                else:
+                    logger.info(message)
                 response = ensure_fn()
                 logger.debug(f"response: {response}")
 
