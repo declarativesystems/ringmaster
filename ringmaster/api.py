@@ -181,7 +181,7 @@ def system_info():
     aws_version = util.run_cmd(["aws", "--version"]).strip()
     eksctl_version = util.run_cmd(["eksctl", "version"]).strip()
     kubectl_version = util.run_cmd(["kubectl", "version", "--short", "--client"]).strip()
-    helm_version = util.run_cmd(["helm", "version", "--short"])
+    helm_version = util.run_cmd(["helm", "version", "--short"]).strip()
 
     message = util.process_res_template(
         "system_info.txt",
