@@ -100,4 +100,5 @@ def main():
         logger.error(str(exc_value))
         if arguments['--debug']:
             logger.exception(e)
+        sys.exit(1)
 
