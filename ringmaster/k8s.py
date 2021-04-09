@@ -121,7 +121,12 @@ def do_kustomizer(working_dir, filename, verb, data=None):
 
 
 def helm_repos(base_cmd, config, filename):
-    repos_list = util.run_cmd_json(base_cmd + ["repo", "list", "--output", "json"])
+    try:
+        repos_list = util.run_cmd_json(base_cmd + ["repo", "list", "--output", "json"])
+    except RuntimeError as e:
+        logger.warning(f"""Listing helm repositories failed, this could be because you 
+        have no repositories installed helm could be broken completely: {e}""")
+        repos_list = []
     logger.debug(f"helm repos installed: {repos_list}")
     repos_installed = list(map(lambda x: x["name"], repos_list))
     logger.debug(f"helm repos installed: {repos_installed}")
