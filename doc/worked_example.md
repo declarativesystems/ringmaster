@@ -17,7 +17,6 @@ ringmaster get stack/0140-docker-secret https://raw.githubusercontent.com/declar
 ringmaster get stack/0150-k8s-efs-driver https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0150-k8s-efs-driver
 ringmaster get stack/0160-efs-mount-targets https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0160-efs-mount-targets
 ringmaster get stack/0170-efs-pv https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0170-efs-pv
-ringmaster get stack/0210-solarwinds-papertrail https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0210-solarwinds-papertrail
 ringmaster get stack/0220-external-secrets https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0220-external-secrets
 ringmaster get stack/0230-external-dns https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0230-external-dns
 ringmaster get stack/0240-k53certbot https://raw.githubusercontent.com/declarativesystems/ringmaster/master/examples/0240-k53certbot
@@ -66,10 +65,6 @@ stack
 │     ├── claim.kubectl.yaml
 │     ├── metadata.yaml
 │     └── pv.kubectl.yaml
-├── 0210-solarwinds-papertrail
-│     ├── logging-secret.kube-system.secret_kubectl.yaml
-│     ├── metadata.yaml
-│     └── solarwinds_papertrail.yaml
 ├── 0220-external-secrets
 │     ├── helm_deploy.yaml
 │     └── metadata.yaml

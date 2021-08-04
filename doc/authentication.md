@@ -37,6 +37,5 @@ credentials:
   user: "yourusername"
   password: "t0ps3re4!"
   account: "XX11111.ap-southeast-2"
-region: "ap-southeast-2"
 ```
 

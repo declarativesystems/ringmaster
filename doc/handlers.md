@@ -35,13 +35,6 @@ Ringmaster supports these handlers:
   output as `*.kubectl.processed.yaml`
 * `*.kubectl.processed.yaml` files are just normal kubectl files
 
-## solarwinds_papertrail.yaml
-
-* Single purpose file to configure solarwinds papertrail at cluster level
-* Ringmaster will perform the entire installation
-* `kustomization` files will be saved to in a directory `download` within the 
-  current step 
-
 ## kustomization.yaml
 
 * Processed with `kubectl (apply|delete) -k`
